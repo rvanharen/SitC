@@ -15,20 +15,19 @@ import datetime
 from numpy import array as nparray
 from numpy import where as npwhere
 from numpy import concatenate as npconcatenate
-from numpy import mean as npmean
+from scipy.stats import nanmean
 import argparse
 import os
 
 
 class time_filter_ncfile:
-    def __init__(self, opts):
-        self.filename = opts.inputfile
-        self.timedelta = opts.timedelta
-        self.timewindow = opts.timewindow
-        self.method = opts.method
+    def __init__(self, filename, timedelta, timewindow, method):
+        self.filename = filename
+        self.timedelta = timedelta
+        self.timewindow = timewindow
         self.check_file()  # check if file exists and has nc extension
         self.read_ncfile()  # open netCDF file and read variables
-        if opts.method == 'interpolate':
+        if method == 'interpolate':
             self.time_filter_ncfile()  # time filter variables
         else:
             self.time_average_ncfile()
@@ -200,7 +199,7 @@ class time_filter_ncfile:
                     value = None
                 else:
                     index_both = npconcatenate((index_up, index_down))
-                    value = npmean(self.tempC[index_both])
+                    value = nanmean(self.tempC[index_both])
             # append to output
             self.time_out.append(current_time)
             self.temp_out.append(value)
@@ -238,4 +237,5 @@ if __name__ == "__main__":
     opts = parser.parse_args()
 
     # time filter data
-    filtered = time_filter_ncfile(opts)
+    filtered = time_filter_ncfile(opts.inputfile, opts.timedelta,
+                                  opts.timewindow, opts.method)
