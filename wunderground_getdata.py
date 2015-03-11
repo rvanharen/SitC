@@ -22,10 +22,11 @@ from lxml import html
 import numbers
 import json
 
+
 class get_wundergrond_data:
-    def __init__(self,opts):
+    def __init__(self, opts):
         self.outputdir = opts.outputdir
-        self.stationid = opts.s__stationid        
+        self.stationid = opts.s__stationid
         self.startdate = date(opts.startyear, 1, 1)
         self.enddate = date(opts.endyear, 12, 31)
         self.location = self.get_station_location(self.stationid)
@@ -33,54 +34,77 @@ class get_wundergrond_data:
         self.get_data()
 
     def get_data(self):
-        #for td in range(0,(self.enddate-self.startdate).days +1):
-        for td in progressbar(range(0,(self.enddate-self.startdate).days +1),
-                              "Downloading: ", 60):            
+        '''
+        Download data from Weather Underground website for a given stationid
+            , a startyar, and an endyear. The html file is parsed and written
+            as csv to a separate txt file for each day.
+        '''
+        for td in progressbar(range(0, (self.enddate - self.startdate).days +
+                                    1), "Downloading: ", 60):
+            # increase the date by 1 day for the next download
             current_date = self.startdate + timedelta(days=td)
+            # set download url
             url = 'http://www.wunderground.com/weatherstation/WXDailyHistory.asp?ID=' + \
-            self.stationid + '&day=' + str(current_date.day) +'&year=' + \
-            str(current_date.year) + '&month=' + str(current_date.month) + '&format=1'
+                self.stationid + '&day=' + str(current_date.day) + '&year=' + \
+                str(current_date.year) + '&month=' + \
+                str(current_date.month) + '&format=1'
+            # define outputfile
             outputfile = self.stationid + '_' + str(current_date.year) \
-                + str(current_date.month).zfill(2) + str(current_date.day).zfill(2) + '.txt'
-            with open(os.path.join(self.outputdir, outputfile), 'wb') as outfile:
+                + str(current_date.month).zfill(2) + \
+                str(current_date.day).zfill(2) + '.txt'
+            # open outputfile
+            with open(os.path.join(self.outputdir, outputfile),
+                      'wb') as outfile:
+                # open and read the url
                 handler = urllib2.urlopen(url)
                 content = handler.read()
                 # convert spaces to non-breaking spaces
                 content = content.replace(' ', '&nbsp;')
-
                 # Removing all the HTML tags from the file
                 outstream = cStringIO.StringIO()
                 parser = htmllib.HTMLParser(
-                    formatter.AbstractFormatter(formatter.DumbWriter(outstream)))
+                    formatter.AbstractFormatter(
+                        formatter.DumbWriter(outstream)))
                 parser.feed(content)
+                # convert spaces back to regular whitespace (' ')
                 content = outstream.getvalue().replace('\xa0', ' ')
-                outstream.close()
+                # write output
                 outfile.write(content)
+                # close handler and outstream
+                outstream.close()
                 handler.close()
 
     def get_station_location(self, stationid):
         '''
         get the location of a Wunderground stationid
         '''
+        # set url to get the location from
         url = 'http://dutch.wunderground.com/personal-weather-station/dashboard?ID=' + stationid
+        # open and read url
         handler = urllib2.urlopen(url)
         content = handler.read()
+        # find the correct html tag that has the location info in it
         tree = html.fromstring(content).find_class('subheading')
-        if len(tree)==1:
+        # get the string of the location
+        if len(tree) == 1:
             raw_location = str(tree[0].text_content())
         else:
             raise IOError('Cannot parse location from html file')
-        location_list = [float(s) for s in raw_location.split() if is_number(s)]
+        # remove anything non-numeric from the string and create a list
+        location_list = [float(s) for s in raw_location.split() if
+                         is_number(s)]
         location_items = ['lat', 'lon', 'height']
+        # create a dictionary for the location
         location = dict(zip(location_items, location_list))
-        if int(location['lat'])==0 or int(location['lon'])==0:
-                   raise ValueError('Could not extract a valid location for ' +
-                                    'stationid: ' + stationid)
+        # check if latitude and longitude are not zero
+        if int(location['lat']) == 0 or int(location['lon']) == 0:
+            raise ValueError('Could not extract a valid location for ' +
+                             'stationid: ' + stationid)
         return location
-    
+
     def get_station_zipcode(self, location):
         '''
-        get zipcode for a given location 
+        get zipcode for a given location
         location['lat'] gives latitude of the location
         location['lon'] gives the longitude of the location
         '''
@@ -95,19 +119,22 @@ class get_wundergrond_data:
         address_components = js['results'][0]['address_components']
         # extract the zipcode from the address component
         zipcode = [address_components[x]['long_name'] for x in
-                   range(0,len(address_components)) if
-                   address_components[x]['types'][0]=='postal_code'][0]
+                   range(0, len(address_components)) if
+                   address_components[x]['types'][0] == 'postal_code'][0]
         # return the zipcode
         return zipcode.encode('utf-8')
 
-def progressbar(it, prefix = "", size = 60):
+
+def progressbar(it, prefix="", size=60):
     '''
     progressbar for a loop
     '''
     count = len(it)
+
     def _show(_i):
         x = int(size*_i/count)
-        sys.stdout.write("%s[%s%s] %i/%i\r" % (prefix, "#"*x, "."*(size-x), _i, count))
+        sys.stdout.write("%s[%s%s] %i/%i\r" % (prefix, "#"*x, "."*(size-x),
+                                               _i, count))
         sys.stdout.flush()
     _show(0)
     for i, item in enumerate(it):
@@ -115,10 +142,11 @@ def progressbar(it, prefix = "", size = 60):
         _show(i+1)
     sys.stdout.write("\n")
     sys.stdout.flush()
-    
+
+
 def is_number(s):
     '''
-    check if the value in the string is a number
+    check if the value in the string is a number and return True or False
     '''
     try:
         float(s)
@@ -126,7 +154,8 @@ def is_number(s):
     except ValueError:
         pass
     return False
-    
+
+
 if __name__ == "__main__":
     # define argument menu
     description = 'Combine csv files weather underground in one output file'
