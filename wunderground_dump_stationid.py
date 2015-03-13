@@ -17,92 +17,116 @@ import numbers
 import json
 from numpy import concatenate
 import sys
+from multiprocessing import Pool, Manager, cpu_count
+import time
 
-class wunderground_stationid:
-    def __init__(self):
-        self.get_stationids()
-        self.dump_stationids()
 
-    def get_stationids(self):
-        url='http://dutch.wunderground.com/weatherstation/ListStations.asp?selectedCountry=Netherlands'
-        page = parse(url)
-        rows = page.xpath(".//table[@id='pwsTable']/tbody/tr")
-        data = list()
-        for row in rows:
-            data.append([c.text if idx>0 else c.getchildren()[0].text for idx,
-                         c in enumerate(row.getchildren())])
-        data = [row[:-1] for row in data]
-        self.data_out = list()
-        
-        for row in progressbar(data, "Downloading: ", 60):
-            # get the location of the station using the stationid
-            # example:
-            # location = {'lat': 52.235, 'lon': 4.814, 'height': 3.0}
-            location = self.get_station_location(row[0])
-            # get the zipcode using the lon/lat location and googlemaps
-            zipcode = self.get_station_zipcode(location)
-            row = concatenate((row,[location['lat'], location['lon'], location['height'], zipcode]))
-            self.data_out.append( [c.encode('utf-8').strip() for c in row])
-        
-    def dump_stationids(self):
-        with open('wunderground_stations.csv', 'w') as fp:
-            a = csv.writer(fp, delimiter=',')
-            a.writerows(self.data_out)
-
-    def get_station_location(self,stationid):
-        '''
-        get the location of a Wunderground stationid
-        '''
-        # set url to get the location from
-        url = 'http://dutch.wunderground.com/personal-weather-station/dashboard?ID=' + stationid
-        # open and read url
-        handler = urllib2.urlopen(url)
-        content = handler.read()
-        # find the correct html tag that has the location info in it
-        tree = html.fromstring(content).find_class('subheading')
-        # get the string of the location
-        if len(tree) == 1:
-            raw_location = str(tree[0].text_content())
+def get_stationids(processes=cpu_count()):
+    '''
+    default multiprocesses to the number of cpu cores
+    '''
+    url='http://dutch.wunderground.com/weatherstation/ListStations.asp?selectedCountry=Netherlands'
+    page = parse(url)
+    rows = page.xpath(".//table[@id='pwsTable']/tbody/tr")
+    data = list()
+    for row in rows:
+        data.append([c.text if idx>0 else c.getchildren()[0].text for idx,
+                     c in enumerate(row.getchildren())])
+    data = [row[:-1] for row in data]
+    pool = Pool(processes) # process per core
+    m = Manager()
+    q = m.Queue()
+    args = [(i, q) for i in data]
+    result = pool.map_async(append_location_zipcode, args)
+    # monitor loop
+    while True:
+        if result.ready():
+            progressbar2(len(data), len(data), prefix="Extracting: ", size=60)
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+            break
         else:
-            raise IOError('Cannot parse location from html file')
-        # remove anything non-numeric from the string and create a list
-        location_list = [float(s) for s in raw_location.split() if
-                         is_number(s)]
-        location_items = ['lat', 'lon', 'height']
-        # create a dictionary for the location
-        location = dict(zip(location_items, location_list))
-        # check if latitude and longitude are not zero
-        if int(location['lat']) == 0 or int(location['lon']) == 0:
-            raise ValueError('Could not extract a valid location for ' +
-                             'stationid: ' + stationid)
-        return location
+            length = q.qsize()            
+            progressbar2(length, len(data), prefix="Extracting: ", size=60)
+            time.sleep(1)
+    return result.get()
+        
+def append_location_zipcode(args):
+        # get the location of the station using the stationid
+        # example:
+        # location = {'lat': 52.235, 'lon': 4.814, 'height': 3.0}
+        row, q = args
+        location = get_station_location(row[0])
+        # get the zipcode using the lon/lat location and googlemaps
+        zipcode = get_station_zipcode(location)
+        row = concatenate((row,[location['lat'], location['lon'], location['height'], zipcode]))
+        q.put(row)
+        return [c.encode('utf-8').strip() for c in row]
+        
+def dump_stationids(data_out):
+    with open('wunderground_stations.csv', 'w') as fp:
+        a = csv.writer(fp, delimiter=',')
+        a.writerows(data_out)
 
-    def get_station_zipcode(self,location):
-        '''
-        get zipcode for a given location
-        location['lat'] gives latitude of the location
-        location['lon'] gives the longitude of the location
-        '''
-        # google maps api url
-        url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=' + \
-            str(location['lat']) + ',' + str(location['lon'])
-        # open url
-        handler = urllib2.urlopen(url)
-        # load json
-        js = json.load(handler)
-        # extract the address_component
+def get_station_location(stationid):
+    '''
+    get the location of a Wunderground stationid
+    '''
+    # set url to get the location from
+    url = 'http://dutch.wunderground.com/personal-weather-station/dashboard?ID=' + stationid
+    # open and read url
+    handler = urllib2.urlopen(url)
+    content = handler.read()
+    # find the correct html tag that has the location info in it
+    tree = html.fromstring(content).find_class('subheading')
+    # get the string of the location
+    if len(tree) == 1:
+        raw_location = str(tree[0].text_content())
+    else:
+        raise IOError('Cannot parse location from html file')
+    # remove anything non-numeric from the string and create a list
+    location_list = [float(s) for s in raw_location.split() if
+                     is_number(s)]
+    location_items = ['lat', 'lon', 'height']
+    # create a dictionary for the location
+    location = dict(zip(location_items, location_list))
+    # check if latitude and longitude are not zero
+    if int(location['lat']) == 0 or int(location['lon']) == 0:
+        raise ValueError('Could not extract a valid location for ' +
+                         'stationid: ' + stationid)
+    return location
+    
+def get_station_zipcode(location):
+    '''
+    get zipcode for a given location
+    location['lat'] gives latitude of the location
+    location['lon'] gives the longitude of the location
+    '''
+    # google maps api url
+    url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=' + \
+        str(location['lat']) + ',' + str(location['lon'])
+    # open url
+    handler = urllib2.urlopen(url)
+    # load json
+    js = json.load(handler)
+    # extract the address_component
+    try:
         address_components = js['results'][0]['address_components']
-        # extract the zipcode from the address component
-        try:
-            zipcode = [address_components[x]['long_name'] for x in
-                    range(0, len(address_components)) if
-                    address_components[x]['types'][0] == 'postal_code'][0]
-        except IndexError:
-            # cannot find zipcode
-            zipcode = 'unknown'
-        # return the zipcode
+    except IndexError:
+        # can't extract zipcode, invalid location?
+        zipcode = 'unknown'
         return zipcode.encode('utf-8')
-
+    # extract the zipcode from the address component
+    try:
+        zipcode = [address_components[x]['long_name'] for x in
+                   range(0, len(address_components)) if
+                   address_components[x]['types'][0] == 'postal_code'][0]
+    except IndexError:
+        # cannot find zipcode
+        zipcode = 'unknown'
+        # return the zipcode
+    return zipcode.encode('utf-8')
+        
 def is_number(s):
     '''
     check if the value in the string is a number and return True or False
@@ -132,6 +156,15 @@ def progressbar(it, prefix="", size=60):
     sys.stdout.write("\n")
     sys.stdout.flush()
 
+def progressbar2(_i, count, prefix="", size=60):
+    '''
+    progressbar for a loop
+    '''
+    x = int(size*_i/count)
+    sys.stdout.write("%s[%s%s] %i/%i\r" % (prefix, "#"*x, "."*(size-x),
+                                            _i, count))
+    sys.stdout.flush()
 
 if __name__ == "__main__":
-    wunderground_stationid()
+    stationdata = get_stationids(processes=8)
+    dump_stationids(stationdata)
