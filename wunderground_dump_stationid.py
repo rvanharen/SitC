@@ -19,7 +19,7 @@ from numpy import concatenate
 import sys
 from multiprocessing import Pool, Manager, cpu_count
 import time
-
+from numpy import vstack
 
 def get_stationids(processes=cpu_count()):
     '''
@@ -27,6 +27,11 @@ def get_stationids(processes=cpu_count()):
     '''
     url='http://dutch.wunderground.com/weatherstation/ListStations.asp?selectedCountry=Netherlands'
     page = parse(url)
+    # header 
+    rows = page.xpath(".//table[@id='pwsTable']/thead/tr")
+    header = [c.text for idx, c in enumerate(rows[0].getchildren())][:-1]
+    # add location/zipcode to header
+    header = concatenate((header, ['lat', 'lon', 'height', 'zipcode']))
     rows = page.xpath(".//table[@id='pwsTable']/tbody/tr")
     data = list()
     for row in rows:
@@ -49,7 +54,12 @@ def get_stationids(processes=cpu_count()):
             length = q.qsize()            
             progressbar2(length, len(data), prefix="Extracting: ", size=60)
             time.sleep(1)
-    return result.get()
+    data_out = result.get()
+    # check if the output datat and header have the same dimension
+    if len(data_out[0]) == len(header):
+        # add the header to the output data if they have the same dimension
+        data_out = vstack((header, data_out))
+    return data_out
         
 def append_location_zipcode(args):
         # get the location of the station using the stationid
@@ -101,6 +111,7 @@ def get_station_zipcode(location):
     get zipcode for a given location
     location['lat'] gives latitude of the location
     location['lon'] gives the longitude of the location
+    note: there is a limit in api calls/day you can make
     '''
     # google maps api url
     url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=' + \
@@ -167,4 +178,5 @@ def progressbar2(_i, count, prefix="", size=60):
 
 if __name__ == "__main__":
     stationdata = get_stationids(processes=8)
+    import pdb; pdb.set_trace()
     dump_stationids(stationdata)
