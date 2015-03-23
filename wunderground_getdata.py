@@ -21,17 +21,48 @@ import sys
 from lxml import html
 import numbers
 import json
-
+import csv
+from combine_wunderground_data import fitem
+import utils
 
 class get_wundergrond_data:
     def __init__(self, opts):
         self.outputdir = opts.outputdir
-        self.stationid = opts.s__stationid
+        self.stationid = opts.stationid
+        self.csvfile = opts.csvfile
+        self.keep = opts.keep
         self.startdate = date(opts.startyear, 1, 1)
         self.enddate = date(opts.endyear, 12, 31)
-        self.location = self.get_station_location(self.stationid)
-        self.get_station_zipcode(self.location)
-        self.get_data()
+        if not any([opts.stationid, self.csvfile]):
+            raise IOError('stationid or csv file with stationids should ' +
+                          'be specified')
+        if self.csvfile:
+            self.load_csvfile()
+            # TODO: add check if required dict keys exist
+            if not opts.stationid:
+                stationids = self.csvdata['Station ID']
+            else:
+                self.stationids = [opts.stationid]
+            for self.stationid in stationids:
+                print self.stationid
+                try:
+                    station_index = self.csvdata['Station ID'].index(self.stationid)
+                    self.zipcode = self.csvdata['zipcode'][station_index]
+                    lon = self.csvdata['lon'][station_index]
+                    lat = self.csvdata['lat'][station_index]
+                    height = self.csvdata['height'][station_index]
+                    # create a dictionary for the location
+                    location_items = ['lat', 'lon', 'height']
+                    location = dict(zip(location_items, [lon, lat, height]))
+                except ValueError:
+                    print "stationid not found in csvfile"
+                    # get location and zipcode if not in csvfile
+                    self.location = self.get_station_location(self.stationid)
+                    self.zipcode = self.get_station_zipcode(self.location)
+                self.outputdir = os.path.join(opts.outputdir, self.stationid)
+                if not os.path.exists(self.outputdir):
+                    os.makedirs(self.outputdir)
+                self.get_data()
 
     def get_data(self):
         '''
@@ -39,7 +70,7 @@ class get_wundergrond_data:
             , a startyar, and an endyear. The html file is parsed and written
             as csv to a separate txt file for each day.
         '''
-        for td in progressbar(range(0, (self.enddate - self.startdate).days +
+        for td in utils.progressbar(range(0, (self.enddate - self.startdate).days +
                                     1), "Downloading: ", 60):
             # increase the date by 1 day for the next download
             current_date = self.startdate + timedelta(days=td)
@@ -52,6 +83,12 @@ class get_wundergrond_data:
             outputfile = self.stationid + '_' + str(current_date.year) \
                 + str(current_date.month).zfill(2) + \
                 str(current_date.day).zfill(2) + '.txt'
+            # check if we want to keep previous downloaded files
+            if self.keep:
+                if os.path.exists(os.path.join(self.outputdir, outputfile)):
+                    continue  # file exists, continue with next iteration
+            elif os.path.exists(os.path.join(self.outputdir, outputfile)):
+                os.remove(os.path.join(self.outputdir, outputfile))
             # open outputfile
             with open(os.path.join(self.outputdir, outputfile),
                       'wb') as outfile:
@@ -92,7 +129,7 @@ class get_wundergrond_data:
             raise IOError('Cannot parse location from html file')
         # remove anything non-numeric from the string and create a list
         location_list = [float(s) for s in raw_location.split() if
-                         is_number(s)]
+                         utils.is_number(s)]
         location_items = ['lat', 'lon', 'height']
         # create a dictionary for the location
         location = dict(zip(location_items, location_list))
@@ -124,36 +161,31 @@ class get_wundergrond_data:
         # return the zipcode
         return zipcode.encode('utf-8')
 
-
-def progressbar(it, prefix="", size=60):
-    '''
-    progressbar for a loop
-    '''
-    count = len(it)
-
-    def _show(_i):
-        x = int(size*_i/count)
-        sys.stdout.write("%s[%s%s] %i/%i\r" % (prefix, "#"*x, "."*(size-x),
-                                               _i, count))
-        sys.stdout.flush()
-    _show(0)
-    for i, item in enumerate(it):
-        yield item
-        _show(i+1)
-    sys.stdout.write("\n")
-    sys.stdout.flush()
-
-
-def is_number(s):
-    '''
-    check if the value in the string is a number and return True or False
-    '''
-    try:
-        float(s)
-        return True
-    except ValueError:
-        pass
-    return False
+    def load_csvfile(self):
+        '''
+        load data csvfile
+        '''
+        with open(self.csvfile, 'r') as csvin:
+            reader = csv.DictReader(csvin, delimiter=',')
+            try:
+                self.csvdata
+            except AttributeError:
+                reader.next()
+                try:
+                    self.csvdata = {k.strip(): [fitem(v)] for k, v in
+                                 reader.next().items()}
+                except StopIteration:
+                    pass
+            current_row = 0
+            for line in reader:
+                current_row += 1
+                if current_row == 1:  # header
+                    # skip the header
+                    continue
+                for k, v in line.items():
+                    if k is not None:  # skip over empty fields
+                        k = k.strip()
+                        self.csvdata[k].append(fitem(v))                 
 
 
 if __name__ == "__main__":
@@ -162,14 +194,24 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description)
     # fill argument groups
     parser.add_argument('-o', '--outputdir', help='Data output directory',
-                        default=os.getcwd(), required=True)
+                        default=os.getcwd(), required=False)
     parser.add_argument('-b', '--startyear', help='Start year',
                         default=2010, required=False)
     parser.add_argument('-e', '--endyear', help='End year',
                         default=date.today().year, required=False)
-    parser.add_argument('-s' '--stationid', help='Station id',
-                        default='IGELDERL5', required=False, action='store')
+    parser.add_argument('-s', '--stationid', help='Station id',
+                        default='', required=False, action='store')
+    parser.add_argument('-c', '--csvfile', help='CSV data file',
+                        required=False, action='store')
+    parser.add_argument('-k', '--keep', help='Keep downloaded files',
+                        required=False, action='store_true')
+    parser.add_argument('-l', '--log', help='Log level', 
+                        choices=utils.LOG_LEVELS_LIST,
+                        default=utils.DEFAULT_LOG_LEVEL)    
     # extract user entered arguments
     opts = parser.parse_args()
+    # define logger
+    logname = os.path.basename(__file__) + '.log'
+    logger = utils.start_logging(filename=logname, level=opts.log)
     # process data
     get_wundergrond_data(opts)
