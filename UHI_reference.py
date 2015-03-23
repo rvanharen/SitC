@@ -1,5 +1,14 @@
 #!/usr/bin/env python2
 
+'''
+Description:
+Author:         Ronald van Haren, NLeSC (r.vanharen@esciencecenter.nl)
+Created:        -
+Last Modified:  -
+License:        Apache 2.0
+Notes:          -
+'''
+
 import zipfile
 import csv
 import StringIO
@@ -7,10 +16,12 @@ from combine_wunderground_data import fitem
 from numpy import vstack
 import os
 
+
 class load_reference_data:
     def __init__(self, filename):
         self.filename = filename
         self.load_file()
+
     def load_file(self):
         '''
         function description
@@ -37,7 +48,7 @@ class load_reference_data:
                     # strip data in row and convert to int
                     # empty fiels are filled with -999
                     data_row = [int(item.strip()) if item.strip() else -999 for
-                          item in row if item]
+                                item in row if item]
                     # create array with output data
                     try:
                         csvdata = vstack((csvdata, data_row))
@@ -48,6 +59,6 @@ class load_reference_data:
         import pdb; pdb.set_trace()
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     filename = 'schiphol/uurgeg_240_2011-2020.zip'
     load_reference_data(filename)
