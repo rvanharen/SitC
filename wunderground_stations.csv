@@ -1,0 +1,321 @@
+Station ID,Neighborhood,City,Station Type,lat,lon,height,zipcode
+IAPELDOO1,van Roekelweg ,Apeldoorn ,Davis Vantage Pro2 (Wireless) ,52.188,5.95,9.0,7339 JB
+IUTRECHT23, ,Utrecht ,Alecto WS-4000 ,52.079,5.139,9.0,3582 HE
+IASOBIGU2, ,"Meerwijk, Uithoorn ",Davis VP2 Pro ,52.235,4.814,3.0,1423 ST
+IGELDERL77,country side ,Silvolde ,automatisch weerstation ,51.912,6.391,18.0,7064 GH
+IBRABANT16,veld ,Breda ,Vantaga pro2 Plus ,51.561,4.705,2.0,4838 GB
+IDAVISVA3,"Eethen, Noord Brabant ",Eethen ,Davis Vantage Pro2 ,51.738,5.07,1.0,4266 GB
+IDRENTHE51,Annen Noord West ,Annen ,Maplin ,53.059,6.711,9.0,9468 GP
+IDRENTHE19,Assen North (NAA office) ,Assen ,Davis Vantage Pro 2 ,53.01,6.568,10.0,9402 TP
+IDRENTHE29,Weerstation Assen ,Assen ,Davis Vantage Pro 2 Plus ,53.013,6.592,9.0,9403 RW
+IDRENTHE52,Beilen ,Beilen ,TFA Nexus Pro ,52.868,6.452,14.0,9411 VC
+IDRENTHE32, ,De Kiel , ,52.867,6.742,18.0,7849 PD
+IDRENTHE18,"Ruinen, Engeland ",De Wolden ,Davis Vantage Pro2 ,52.767,6.368,12.0,7963 PW
+IDRENTHE49,Weerstation Eelde ,Eelde ,Davis Vantage Vue ,53.135,6.57,3.0,9761 BH
+IDRENTHE38, ,Een ,Davis Vantage Pro 2 Plus ,53.078,6.379,7.0,9342 TG
+IDRENTHE28,Emmen ,Emmen ,Davis Vantage Pro ,52.774,6.965,36.0,7826 GC
+IDRENTHE13,Emmen ,Emmen ,Davis Vantage Pro2 (Wireless) ,52.748,6.877,4.0,7827 NP
+IDRENTHE26,Sneeuwvink ,Emmen ,Oregon Scientific WMR200 UV ,52.747,6.898,6.0,7827 DN
+IDRENTHE33, ,Emmen ,Oregon WMR200 ,52.788,6.939,25.0,7823 BK
+IDRENTHE36,Weerstation-Emmen ,Emmen ,La Crosse 3650 ,52.744,6.898,17.0,unknown
+IDRENTHE53,Zonkracht ,Emmen ,Oregon Scientific Professional Weather Center ,52.749,6.881,15.0,7827 NW
+IDRENTHE46,Gasselternijveenschemond ,Gasselternijveenschemond ,WS-4000 ,52.995,6.898,4.0,9515 PD
+IDRENTHE44,Hoogeveen ,Hoogeveen ,Davis Vantage Pro2 Wireless ,52.724,6.516,13.0,7904 JK
+IDRENTHE50,Meppel Drenthe ,Meppel ,Davis Vantage Pro2 Plus (Wireless) ,52.696,6.186,2.0,7941 ED
+IDRENTHE16,Sleen ,meteo-sleen.nl ,davis vp2 ,52.778,6.798,17.0,7841 BW
+IDRENTHE24, ,Norg ,LaCrosse WS2308 ,53.066,6.444,6.0,9331 LX
+IDRENTHE47,Rolde ,Rolde ,WH1080 ,52.982,6.65,14.0,9451 GA
+IFLEVOLA20,Noorderplassen ,Almere ,Davis Vantage Pro 2 ,52.387,5.184,-3.0,1319 BN
+IFLEVOLA27,Almere Buiten ,Almere ,Davis Vantage Pro2 Plus (Wireless) ,52.391,5.284,-3.0,1338 SJ
+IFLEVOLA35,Stripheldenbuurt ,Almere ,WS1080 (WH1080) ,52.403,5.313,-6.0,1336 BH
+IFLEVOLA25, ,Almere Buitenring ,Davis Vantage Pro2 ,52.408,5.278,-4.0,1335 LE
+IFLEVOLA26,Biddinghuizen (Centrum) ,Biddinghuizen ,Davis Vantage Pro 2 ,52.451,5.689,-3.0,8256 CM
+IFLEVOLA16,Buitenplaats Veluwemeer ,Biddinghuizen ,Davis Vantage Pro 2 ,52.39,5.641,3.0,8256 TD
+IFLEVOLA23,Emmeloord ,Emmeloord ,Davis Vantage Pro2 ,52.704,5.733,-3.0,8303 XD
+IFLEVOLA17,Lelystad Golfpark ,Lelystad ,WS3600 ,52.529,5.449,-3.0,8241 AA
+IFLEVOLA29,Het weer op Urk ,Urk ,VP2 ,52.664,5.615,0.0,8321 LT
+IGLHARDE1,Zeewolde ,Zeewolde ,Davis wm 2 ,52.347,5.517,-4.0,unknown
+IFRIESLA51,Appelscha ,Appelscha ,Davis Vantage Pro 2 Wireless ,52.952,6.356,10.0,8426 EB
+IFRIESLA39,Bakkeveen ,Bakkeveen ,Str ,53.083,6.261,1.0,9243 KH
+IFRIESLA53,Burgum ,Burgum ,WS-4000 ,53.189,5.984,0.0,9251 GK
+IFRIESLA72,Heerenveen ,De Knipe ,WH3080 & Raspberry Pi ,52.965,5.998,2.0,8456 HS
+IFRIESLA50, ,Dongjum ,Davis Vantage Pro 2 ,53.209,5.545,0.0,8808 HH
+IFRIESLA64,Weerstation Goutum ,Goutum ,TFA Primus ,53.181,5.818,0.0,9084 BZ
+IFRIESLA43,"Friesland, Nederland ",grou ,Davis Vantage Pro2 (Wireless) ,53.091,5.827,0.0,9001 LE
+IFRIESLA19,"Huins, Friesland ",Huins ,Vantage Pro ,53.16,5.667,0.0,8832 KB
+IFRIESLA65,Advidee ,Joure ,Vantage PRO2 plus ,52.975,5.805,0.0,8502 AP
+IFRIESLA71,Kollum ,Kollum ,Oregon WMR-200 ,53.286,6.15,0.0,9291 AA
+IFIESLAN2,Koudum ,Koudum ,VantagePro2 ,52.914,5.443,0.0,8723 GD
+IFRIESLA8,Leeuwarden ,Leeuwarden ,Davis Vantage Pro 2 plus ,53.211,5.772,0.0,8915 HG
+IFRIESLA49, ,Lemmer ,Davis VP2 ,52.838,5.723,0.0,8531 AA
+IFRIESLA38, ,Lemsterland , ,52.854,5.707,-3047.0,8532 BN
+IFRIESLA55, ,Makkum ,Vantage Pro2 ,53.051,5.388,0.0,unknown
+IMENALDU2,"Menaldum, Friesland ",Menaldum ,Cresta WXR815 ,53.213,5.667,0.0,9036 KV
+IFRIESLA16,Oentsjerk ,Oentsjerk ,Davis Vantage Pro 2 ,53.254,5.899,0.0,9062 GM
+IMETEOOO2,Oosterwolde ,Oosterwolde ,ALecto WS-4000 ,52.993,6.276,6.0,8431 PR
+IFRIESLA37,Oosterzee ,Oosterzee ,Vantage-VUE Wireless ,52.875,5.776,0.0,8536 VK
+IFRIESLA68,Sloten Tadema ,Sloten ,Davis Vantage Vue ,52.894,5.64,3.0,8556 XB
+IFRIESLA47, ,Sneek , ,53.038,5.685,0.0,8604 ZA
+IFRIESLA22,Surhuisterveen Centrum ,Surhuisterveen ,Cresta PMT980 ,53.182,6.165,1.0,9231 CH
+IGELDERL29,Weerstation Aalten ,Aalten ,tfa nexus ,51.924,6.574,25.0,7122 WS
+IGELDERL5,Apeldoorn ,Apeldoorn ,WMR918 ,52.208,5.937,20.0,7312 CW
+IGELDERL60,Apeldoorn ,Apeldoorn ,WS4000 ,52.22,6.001,10.0,7325 XV
+IGELDERL76,Apeldoorn (Zuidwest) ,Apeldoorn ,City ,52.2,5.955,21.0,7335 LD
+IGELDERL99, ,Apeldoorn ,Oregon WMR200 ,52.195,5.95,21.0,7335 JN
+IGELDERL72,Presikhaaf ,Arnhem ,Davis Vantage Pro2 (Wireless) ,51.987,5.945,10.0,6826 CC
+IGELDERL84,Plattenburg ,Arnhem ,LaCrosse WS2800 ,51.987,5.937,17.0,unknown
+IGELDERL89,Beuningen ,Beuningen ,VantagePro2 ,51.859,5.785,9.0,6641 JS
+IGELDERL25,Borculo ,Borculo ,Davis Vantage Pro2 (Wireless) ,52.114,6.511,10.0,7271 GC
+IGELDERL53, ,Boven-Leeuwen ,Vantage Pro2 Plus ,51.88,5.556,6.0,6657 AS
+IGELDERL66,Culemborg ,Culemborg ,Davis Vantage Pro 2 Wireless ,51.954,5.208,4.0,4105 XZ
+IGELDERL27,Doetinchem-Vijverberg ,Doetinchem ,Vantage Pro ,51.95,6.31,13.0,7004 BP
+IGELDERL95,Wijnboerderij 't Heekenbroek ,Drempt ,Davis VP ,52.02,6.194,7.0,6996 DZ
+IGELDERL83,Weerstation Eefde ,Eefde ,Davis Vantage Vue and Vantage Pro2 ,52.174,6.227,7.0,7211 DP
+IGELDERL70,NW Veluwe ,Elburg , ,52.451,5.858,0.0,8081 NA
+IGELDERL71,Ermelo (centre) ,Ermelo ,WMR-200 ,52.298,5.623,14.0,3851 KA
+IGELDERL75,Camping in de Rimboe ,Ermelo ,WMR100 ,52.292,5.651,32.0,3852 ZD
+IGELDERL104,Hattem ,Hattem ,La Crosse 2800IT ,52.468,6.072,4.0,8051 DB
+IGELDERL142,Hattemerbroek ,Hattemerbroek ,Davis Vantage Pro2 (Wireless) ,52.471,6.014,3.0,8094 PA
+IGELDERL37, ,Hengelo gld ,Davis Vantage Pro 2 ,52.046,6.313,13.0,7255 XE
+IGELDERL86,Homoet ,Homoet ,Davis Vantage Pro 2 ,51.939,5.787,6.0,6661 LB
+IGELDERL65,Weerstation Nijbroek ,Nijbroek ,Davis Vantage Pro2 (Wireless) ,52.288,6.056,3.0,7397 NB
+IGELDERL64,Nijmegen ,Nijmegen , ,51.844,5.875,39.0,6522 AT
+IGELDERL63, ,Nijmegen ,Davis Vantage Pro 2 Plus ,51.837,5.839,15.0,6542 KN
+IGELDERL103,mOoijweer ,Ooij ,other ,51.859,5.934,10.0,6576 AD
+IGELDERL82, ,Opheusden ,Vantage Pro ,51.927,5.635,7.0,4043 MZ
+IGELDERL153,Camping Lorkenbos ,Otterlo ,other ,52.091,5.764,25.0,unknown
+IGELDERL54,Andelst ,Overbetuwe ,Vantage Pro 2 Wireless ,51.907,5.731,7.0,6673 BW
+IGELDERL74,Ruurlosebroek ,Ruurlo , ,52.065,6.515,15.0,7261 RK
+I90579508,Silvolde ,Silvolde ,Davis Vantage Pro2 (Wireless) ,51.904,6.39,17.0,7064 BW
+IGELDERL81,Isendoorn College ,Warnsveld ,Davis Vantage Pro ,52.135,6.224,7.0,unknown
+IGELDERL98, ,Wijchen ,stadsstation ,51.816,5.726,10.0,6601 CC
+IGELDERL145,Zoelen ,Zoelen ,Netatmo Weather Station ,51.916,5.398,4.0,4011 EN
+IGELDERL79,Tuin/Terras temp. Eefde ,Zutphen ,Fine Offset WS-1080 ,52.144,6.196,7.0,7201 MR
+IGLDHETE2, ,Heteren ,Davis Vantage Vue ,51.956,5.749,7.0,6666 HK
+IGLDNUNS2,Nunspeet ,Nunspeet ,Fine Offset WH1080 ,52.39,5.798,3.0,8072 HK
+IGELDERL73,Weerstation Elburg (Vesting-Centrum). ,Elburg ,other ,52.449,5.832,4.0,8081 GG
+IGROOTEG1,Weerstation Grootegast ,Grootegast ,Oregon WMR 200 ,53.21,6.28,0.0,9861 GG
+IGRONING51,op 't Zandt ,'t Zandt ,TFA Primus ,53.368,6.773,0.0,unknown
+IGRONING103,Bourtange ,Bourtange ,other ,53.012,7.183,3.0,9545 TB
+IGRONING45,"Groningen, Ulgersmaborg ",Groningen ,Davis Vantage Pro2 Plus ,53.232,6.604,0.0,9731 JP
+IGRONING41,Beijum-West ,Groningen-Beijum ,Alecto WS-4000 ,53.249,6.584,0.0,9737 PZ
+IGRONING52,Hoogezand ,Hoogezand ,Davis Vantage Pro2 ,53.159,6.759,7.0,9603 AV
+IGRONING39,Musselkanaal ,Musselkanaal ,vantage pro 2 ,52.943,6.995,7.0,9581 TA
+IGRONING47,www.WeerSappemeer.nl ,Sappemeer-Noord ,Davis Vantage Pro2 ,53.173,6.794,0.0,9611 BT
+IGRONING36,Groningen ,Sauwerd ,Davis Vantage Pro2 ,53.294,6.538,0.0,9771 AX
+IGRONING16, ,Uithuizermeeden ,Davis Pro2 ,53.418,6.726,0.0,9982 JG
+IGRONING42,Uithuizermeeden-actueel ,Uithuizermeeden ,Davis VP2 Solar UV ,53.415,6.721,1.0,9982 HB
+IGRONING120,Veele ,Veele ,other ,53.043,7.095,0.0,9541 VM
+IGRONING56,Veendam ,Veendam ,WS-4000 ,53.105,6.859,2.0,9642 NE
+IJABOSKA2,Boskamp ,Boskamp ,Campbell Scientific ,52.331,6.128,0.0,8121 CW
+ILIMBURG46,Bunde ,Bunde ,Davis Vantage Pro 2 Wireless ,50.892,5.739,65.0,6241 GJ
+ILIMBURG62,Weerstation Geleen ,Geleen ,other ,50.966,5.816,68.0,6161 XT
+ILIMBURG40, ,Haelen ,Davis VP2 Plus ,51.224,5.965,27.0,unknown
+ILIMBURG73,Musschemig ,Heerlen ,Davis Vantige Vue ,50.901,5.97,95.0,6412 SL
+ILIMBURG37,Hoensbroek ,Hoensbroek ,TFA Nexus Pro ,50.91,5.933,85.0,6433 HD
+ILIMBURG6,"Montfort, The Netherlands ",Montfort ,Weather Monitor II ,51.125,5.95,27.0,6065 BZ
+ILIMBURG55,Panningen ,Panningen ,Oregon Scientific WMR-200 ,51.326,5.986,35.0,5981 EP
+ILIMBURG42,Dorpskern ,Posterholt ,1-Wire / Oregon Scientific Hardware ,51.124,6.04,30.0,6061 CM
+ILIMBURG36,Reuver Limburg ,Reuver ,Davis Vantage Vue (Wireless) ,51.292,6.082,23.0,5953 AT
+ILIMBURG32,Montfort - Nieuwe Heide ,Roerdalen ,Oregon Scientific WMRS200 ,51.129,5.937,30.0,6065 CN
+ILIMBURG29,Hoogvonderen ,Roermond ,Personal ,51.19,6.019,15.0,6043 WH
+ILIMBURG56,Watersportschool Frissen ,Roermond ,Vantage Vue ,51.193,5.948,14.0,6041 TR
+ILIMBURG47, ,Schinnen ,Davis Vantage ,50.942,5.888,71.0,6365 CP
+ILIMBURG70,Schinveld ,Schinveld ,Alecto WS-4000 ,50.967,5.982,64.0,6451 EW
+ILIMBURG24,Kerkrade ,Terwinselen ,VantagePro II ,50.867,6.025,150.0,6467 EG
+ILIMBURG72,Venlo-Blerick ,Venlo-Blerick ,Alecto WS 5000 eco ,51.378,6.144,20.0,unknown
+INOORDHO63,Zaanstad ,Zaandam , ,52.45,4.839,3.0,1503 WK
+IMIDDENW2,Nieuwe Vaart ,Sprang-capelle ,Ventus W-831 ,51.676,4.98,0.0,5161 AM
+INBRSON2,Son en Breugel ,Son en Breugel ,Davis Vantage Pro2 ,51.518,5.486,12.0,5691 GP
+IN.BRSTH1,Weerstation ,Sint Hubert ,WMR 928 ,51.672,5.807,10.0,5454 GW
+INORTHBR4, ,Drimmelen ,Davis Vantage Vue ,51.71,4.813,9.0,4924 BB
+INBROOSE2,Stad ,Roosendaal ,Davis Vantage Pro2 ,51.54,4.476,6.0,4702 NH
+IDELFT1,Delft ,Zuid Holland ,Davis Vantage Pro2 Plus ,51.98,4.342,-1.0,2622 JX
+INHAMSTE6,Amstelveen - North ,Amstelveen ,WM918 ,52.313,4.869,-3.0,1181 KH
+INOORD-H9,Dunes ,Wijk Aan Zee ,WS2310 ,52.506,4.576,4.0,1949 EC
+INBBREDA2,Brabantpark Breda oost ,Breda ,Davis Vantage VUE ,51.589,4.8,0.0,4817 JJ
+INOORDBR39,cuijk ,Cuijk ,wmr200 ,51.736,5.86,10.0,5432 ES
+INBEERSE2,Eersel ,Eersel ,Davis Vantage Pro2 Plus (Wireless) ,51.355,5.321,29.0,5521 KG
+INOORDBR6,Grave ,Grave ,WMR928n ,51.758,5.74,9.0,5361 HB
+INOORDBR46,Het Bad ,Hank ,Davis Vantage Pro ,51.749,4.927,0.0,4273 LL
+INOORDBR26, ,Hapert ,Alecto WS-4000 ,51.373,5.264,30.0,5527 AB
+INOORDBR67,Helmond - Vossenberg ,Helmond - Vossenberg ,Davis Vantage Vue ,51.481,5.671,18.0,unknown
+INOORDBR13, ,Hoogeloon ,Davis Vantage Pro 2 ,51.396,5.294,25.0,5528 NH
+INOORDBR70,Oosterhout ,Oosterhout ,other ,51.66,4.86,0.0,4907 DT
+INOORDHO17,Lyceum buurt ,Alkmaar ,Davis Vantage Pro2 ,52.626,4.747,0.0,1814 BR
+INOORDHO94,Amsterdam Nieuwmarkt ,Amsterdam ,Columbia Orion ,52.373,4.9,9.0,1012 CR
+INOORDHO117,Saendelft ,Assendelft ,Davis Vantage Pro2 (Wireless) ,52.484,4.765,0.0,1566 HX
+INOORDHO84,Schiphol ,Badhoevedorp ,Vantage Pro2 ,52.332,4.781,-3.0,1171 GC
+INOORDHO86,Egmondermeer ,Egmond Aan Den Hoef ,Fine Offset WH3080 ,52.626,4.705,0.0,1934 PN
+INOORDHO74,Egmond aan Zee ,Egmond Aan Zee ,Davis Vantage Pro2 (Wireless) ,52.615,4.626,14.0,1931 VT
+INHDENHE2,Meteo-Julianadorp ,Julianadorp ,Davis Vantage Pro2 ,52.887,4.736,7.0,1788 VC
+I90580867,Purmerend Baaienwijk ,Purmerend ,Davis Vantage Vue ,52.489,4.934,-1.0,unknown
+INORTHHO3,Venhuizen ,Venhuizen ,Vantage Pro2 ,52.666,5.202,0.0,1606 BL
+INOORDHO73,Venhuizen ,Venhuizen ,Davis Vantage Pro2 Plus ,52.666,5.212,0.0,1606 NH
+INOORDHO42,Zandvoort ,Zandvoort ,Davis Vantage Pro2 ,52.373,4.533,10.0,2042 VG
+INOORDHO50,Zuid Scharwoude ,Zuid Scharwoude ,Davis Vatage PRO2 ,52.697,4.814,6.0,1722 XA
+INOORDHO95,Zuidoostbeemster ,Zuidoostbeemster ,Davis VP2 ,52.515,4.942,0.0,1461 AD
+INOORDBR51,Asten centrum ,Asten ,Davis Vantage Pro 2 Plus fan ,51.405,5.744,24.0,5721 DZ
+INOORDBR138,Saturnusstraat ,Asten ,Davis Vantage Pro2 (Wireless) ,51.411,5.754,24.0,5721 BS
+INOORDBR65,Noordgeest ,Bergen Op Zoom ,Davis Vantage Pro 2 ,51.507,4.287,11.0,4614 KM
+INOORDBR15,Berghem's Weer Actueel ,Berghem ,Davis Vantage Pro 2 Plus 24 hour fan aspirated. ,51.769,5.574,10.0,5351 NX
+INOORDBR139,Breda Kortendonk ,Breda ,Netatmo Weather Station ,51.608,4.744,1.0,4824 CM
+INOORDBR56,Noord Brabant ,Budel-Dorplein ,Vantage Pro2 ,51.237,5.577,38.0,6024 AT
+INOORDBR75,De Mortel ,De Mortel ,Davis Vantage Pro ,51.54,5.706,17.0,5425 RJ
+INOORDBR140,Country side ,Den Dungen ,Netatmo Weather Station ,51.673,5.372,3.0,5275 HT
+INOORDBR37, ,Engelen ,Alecto WS4000 (Fine Offset WH1081) ,51.728,5.257,0.0,5221 LC
+INOORDBR64,Grauwe Polder ,Etten-Leur ,Davis Vantage Pro2 ,51.558,4.631,7.0,4876 VD
+INOORDBR21,Genderen ,Genderen ,Davis Vantage Pro2 ,51.735,5.084,1.0,4265 HS
+INOORDBR84,Halsteren ,Halsteren ,Oregon Scientific WMR-200 ,51.528,4.276,2.0,4661 JM
+INOORDBR59,heesch ,Heesch ,http://www.weerstation-heesch.nl/ ,51.732,5.53,10.0,5384 DB
+INOORDBR48,Mierlo-Hout ,Helmond ,WS-4000 ,51.465,5.642,16.0,5706 RW
+INOORDBR63,Helmond - Brandevoort ,Helmond ,Oregon Scientific WMR-200 ,51.459,5.625,17.0,5706 HA
+INOORDBR55, ,Liempde ,Davis Vantage Pro 2 plus ,51.573,5.375,10.0,5298 SC
+INOORDBR78,Cranendonck ,Maarheeze ,WS2810 ,51.315,5.617,28.0,6026 DK
+INOORDBR28,Nuenen ,Nuenen ,Davis Vantage Pro 2 ,51.474,5.564,17.0,5673 RN
+INOORDBR54,Oosterhout ,Oosterhout Nb ,TFA Primus ,51.659,4.857,0.0,4907 EG
+INOORDBR66,RoosendaalWest ,Roosendaal ,Vantage Pro2 ,51.535,4.442,2.0,4703 NA
+INOORDBR129,Kroeven ,Roosendaal ,Netatmo Weather Station ,51.522,4.461,4.0,4707 CA
+INOORDBR18,Tilburg Centrum ,Tilburg ,Cresta WXR815LM ,51.553,5.095,14.0,5017 AS
+INOORDBR32,Tilburg-Reeshof ,Tilburg ,TFA (La Crosse) WS2800 ,51.579,5.01,6.0,5043 LS
+INOORD-B10,Veghel ,Veghel ,Davis Vantage Pro2 Plus (Wireless) ,51.617,5.563,10.0,5464 XG
+INOORDBR40,Vught ,Vught , ,51.663,5.293,7.0,5261 XD
+INOORDBR34, ,Woudrichem , ,51.769,4.95,0.0,unknown
+INOORDHO76,Alkmaar Noord ,Alkmaar ,Davis Vantage Pro2 ,52.671,4.768,2.0,1827 PD
+INHALKMA1,Bergermeer ,Alkmaar (West) ,Davis Vantage Vue (Wireless) ,52.643,4.731,0.0,1817 KR
+I90578852, ,Alkmaar Watertoorn ,Davis Vantage Pro ,52.637,4.737,3.0,1815 CJ
+INOORDHO32,Amsterdam Holendrecht ,Amsterdam ,Nexus ,52.304,4.972,-1.0,unknown
+INOORDHO67,Amsterdam DL ,Amsterdam , ,52.352,4.866,7.0,1075 HK
+INOORDHO29,Gemeente Velsen ,Driehuis NH ,Oregon Scientific WMR200 UV ,52.447,4.635,6.0,1985 HC
+IHAARLEM1,Haarlem ,Haarlem ,Ultimeter 2000 ,52.367,4.659,1.0,2035 SM
+INOORDHO91,Haarlem ,HAARLEM ,WS4000 ,52.358,4.668,0.0,2037 MC
+INOORDHO96,Haarlem ,Haarlem ,Nexus TFA ,52.382,4.642,3.0,2011 JM
+INOORDHO65,Heerhugowaard ,Heerhugowaard ,davis vantage pro 2 ,52.641,4.823,-3.0,1705 NC
+INOORDHO179,THUIS ,Huizen ,Ambient Weather WS-1000 (Wireless) ,52.294,5.247,4.0,1276 DB
+INOORDHO56,Vogelzand-Julianadorp ,Julianadorp ,Davis Vantage Vue ,52.892,4.735,9.0,1788 MP
+INOORDHO70, ,Koos Meteo , ,52.44,4.802,0.0,1507 VM
+INOORDHO92,Haarlemmermeer ,Nieuw-Vennep ,TFA Primus ,52.277,4.617,-7.0,2152 HP
+INOORDHO102,Haarlemmermeer ,Nieuw-Vennep ,Cresta TE923 ,52.268,4.631,-3.0,2152 XD
+INORTHHO6,Obdam Poelenburg ,Obdam ,Davis Vantage Pro2 ,52.671,4.905,0.0,unknown
+INOORDHO66,Oostzaan ,Oostzaan ,Davis Vantage Pro2 plus ,52.434,4.88,0.0,1511 GJ
+INOORDHO108,alkmaar ,Oudorp ,Davis ,52.637,4.781,0.0,1829 HJ
+INOORDHO69,Schagen ,Schagen ,Alecto 4200 / Fine offset 1081 ,52.789,4.786,3.0,1742 BM
+INOORDHO109,Schoorl ,Schoorl ,Davis Vantage Pro 2 Plus ,52.706,4.706,3.0,1871 SJ
+ITUITJEN1,Harenkarspel ,Tuitjenhorn ,Davis Vantage pro2 ,52.738,4.752,0.0,1747 EL
+INOORDHO104,"Uitgeest, Geesterweg ",Uitgeest ,WMR968 ,52.527,4.707,0.0,1911 HL
+INOORDHO83,Edam-Volendam ,Volendam , ,52.5,5.057,-1.0,1132 VC
+INOORDHO100, ,Weesp ,Davis Vantage Vue ,52.312,5.057,-2.0,1382 LA
+INOORDHO35, ,Wervershoof ,Davis vantage pro plus ,52.735,5.151,-3.0,1693 KT
+INOORDHO75,Westzaan ,Westzaan ,Oregon Scientific WMR200 ,52.465,4.768,0.0,unknown
+INHOOSTZ1,Zaanstreek ,Zaanstad ,Vantage Davis Pro2 ,52.45,4.822,0.0,1502 BD
+INOORDBR50,Helmond - Dierdonk ,Helmond , ,51.493,5.691,17.0,5709 MT
+INOORDBR77,MeteoFrits ,Valkenswaard ,Davis Vantage pro 2 ,51.351,5.464,25.0,5554 KD
+INOORDHO53,"Limmen, Noordholland ",Limmen ,Davis Vantage Vue ,52.569,4.7,0.0,1906 AG
+INOORDHO43, ,Zaandam ,WH1080 ,52.44,4.805,0.0,1507 TK
+INORTHBR2,Netherlands Noord Brabant ,Bergen Op Zoom ,Davis Vantage Pro ,51.478,4.283,3.0,4617 LW
+INORTHBR5,Drunen ,Drunen ,WH3080 ,51.681,5.119,3.0,5152 VC
+INORTHBR8,Stadsedijk ,Oudemolen ,TFA Primus ,51.665,4.442,-2.0,4796 RG
+INORTHHO2,Amstelveen - Westwijk ,Amstelveen , ,52.278,4.831,-3.0,unknown
+INORTHHO20,Nicolaas Maesstraat ,Amsterdam ,other ,52.355,4.883,18.0,1071 PN
+INORTHHO8, ,Hoorn ,TFA Nexus Pro ,52.674,5.089,-2.0,unknown
+INORTHHO7, ,Naarden ,Davis Vantage Pro II ,52.289,5.154,4.0,1411 GE
+IOVERIJS23,Rosarium ,Almelo ,Scientific Oregon WMR 200 ,52.359,6.641,12.0,7604 EH
+IOVERIJS111,Kollenveld ,Almelo ,AcuRite Pro Weather Center ,52.348,6.688,11.0,7607 RS
+IOVERIJS38, ,Dalfsen ,s ,52.517,6.257,1.0,7721 WL
+IOVERIJS31, ,Enschede ,Alecto WS4000 ,52.206,6.97,41.0,7534 HL
+IOVERIJS18,haaksbergen ,Haaksbergen ,wmr-928N ,52.168,6.726,20.0,7483 BK
+IOVERIJS30, ,Haaksbergen ,Ws 2500 ,52.17,6.736,22.0,unknown
+IOVERIJS28, ,Hellendoorn , ,52.381,6.45,10.0,7447 GK
+IOVERIJS33, ,Hengelo , ,52.253,6.8,18.0,7553 LB
+IOVERIJS55,Holten ,Holten ,TFA Primus ,52.292,6.434,24.0,7451 HM
+IIJSSELM1,IJsselmuiden ,IJsselmuiden ,WS2305 ,52.57,5.928,0.0,8271 DS
+IOVERIJS34,Kampen (Fonteinkruid) ,Kampen ,TFA Nexus Pro ,52.551,5.89,1.0,8265 LJ
+IOVERIJS12,Twente ,Losser ,CRESTA WXR 815 ,52.255,7.003,36.0,7582 PV
+IOVERIJS59, ,Markelo ,Davis Vantage Pro2 ,52.234,6.5,17.0,7475 DA
+IOVERIJS35, ,Nijverdal , ,52.376,6.487,0.0,7443 RK
+IOVERIJS47,Steenwijkerland ,Vollenhove ,Oregon WMR-88 ,52.678,5.946,0.0,unknown
+IOVERIJS49,Vriezenveen ,Vriezenveen ,LaCrosseWS2800 ,52.408,6.62,10.0,7671 GN
+IOVERIJS45,Welsum ,Welsum , ,52.311,6.086,3.0,unknown
+IOVERIJS51,"Welsum, Katerstede ",Welsum , ,52.329,6.088,3.0,8196 KB
+IOVERIJS36, ,Zwolle ,Davis VP2 ,52.519,6.044,0.0,8042 HS
+IOVERIJS50, ,Zwolle ,TFA Primus WS-2800 ,52.497,6.105,0.0,8017 HS
+ISOUTHHO16,Den Hoorn ,Den Hoorn ,Davis Vantage Pro2 (Wireless) ,52.0,4.335,0.0,2635 GJ
+ISOUTHHO6,Flakkee ,Middelharnis ,WMR200 ,51.76,4.156,0.0,3241 GE
+IZHVLAAR1,Vlaardingen ,Vlaardingen ,davis vp2 plus ,51.914,4.338,5.0,3131 GG
+IUTNIEUW1,Doorslag ,Nieuwegein ,WMR968 ,52.019,5.069,6.0,3435 ZP
+IUTRECHT26, ,Amersfoort ,La Crosse WS2350 ,52.181,5.395,6.0,3822 TH
+IUTRECHT32,Amersfoort - Zielhorst ,Amersfoort ,Davis Vantage Pro2 ,52.181,5.405,3.0,3822 CS
+IUTRECHT35,NMU-Wageningen University ,Amersfoort , ,52.152,5.393,4.0,3817 BK
+IUTRECHT96,Geonovum ,Amersfoort ,Davis Vantage Pro2 (Wireless) ,52.152,5.372,13.0,3818 HP
+IUTRECHT45,Eemnes ,Eemnes ,Davis Vantage Pro II ,52.248,5.252,2.0,3755 WZ
+IUTRECHT16,Hoogland ,Hoogland ,Vantage Pro 2 ,52.192,5.372,1.0,3828 GH
+IUTRECHT66,Zenderpark ,IJsselstein ,WH1080 / Alecto-WS4000 ,52.01,5.045,0.0,3404 WC
+IUTRECHT49,IJsselstein ,IJSSELSTEIN UT ,Nexus Pro Solar ,52.02,5.06,3.0,3402 PP
+IUTRECHT52,Leusden ,Leusden ,WS5000 ,52.13,5.443,3.0,3831 ZK
+IUTRECHT63,Maarssenbroek ,Maarssen ,Alinco WS-4000 ,52.139,5.02,3.0,3607 KV
+IUTRECHT20,weerstation soestdijk. ,Soest ,La Crosse 2305 gemodificeerd ,52.18,5.284,10.0,3762 CC
+IUTRECHT53,Weerstation Overhees ,Soest ,WS4000 ,52.172,5.28,3.0,3766 EP
+IUTRECHT56, ,Utr. Heuvelrug , ,52.07,5.38,8.0,unknown
+IUTRECHT39,NMU-Wageningen University ,Utrecht ,urban ,52.094,5.1,1.0,3532 VP
+IUTRECHT60,Parkwijk Leidsche Rijn ,Utrecht ,Davis Vantage Pro2 Plus (Wireless) ,52.09,5.062,6.0,3544 BE
+IUTRECHT125,Rivierenwijk ,Utrecht ,Netatmo Weather Station ,52.07,5.116,3.0,3522 GL
+IUTRECHT57,Meesvink ,Veenendaal ,oregon WMR 200 ,52.031,5.53,0.0,unknown
+IUTRECHT21,Weerstation-Wijk.nl ,Wijk Bij Duurstede ,Vantage Pro 2 Wireless with UV / Solar ,51.971,5.332,4.0,3961 KX
+IUTRECHT65,Behuizing ,Wijk Bij Duurstede ,Davis Pro2 ,51.975,5.325,9.0,3961 XL
+IUTRECHT24,Woerden ,Woerden ,Davis Vantage Vue (Wireless) ,52.086,4.846,0.0,unknown
+IUTRECHT47,Woerden . Barwoutswaarder ,Woerden ,Davis Vantage Pro2 Plus (Wireless) ,52.077,4.831,0.0,3449 HK
+IZEELAND4,Goes-West ,Goes ,Oregon Scientific WMR-918 ,30.875,51.5,-3047.0,unknown
+IZEELAND38,Heinkenszand ,Heinkenszand ,Alinco WS-4000 ,51.474,3.817,3.0,4451 AJ
+IZEELAND25,Hoedekenskerke ,Hoedekenskerke ,other ,51.427,-356.098,0.0,unknown
+IZEELAND55,Groote Kreek ,Hulst ,Netatmo Weather Station ,51.275,4.072,0.0,4562 BJ
+IZEELAND34,Kloosterse wind ,Kloosterzande ,Davis Vantage Vue ,51.366,4.011,3.0,4587 GA
+IZEELAND16,PROOIJENSPARK ,MIDDELBURG ,tfa nexus ,51.52,3.61,2.0,4333 RA
+IZEELAND35,Middelburg NO VTR ,Middelburg ,Davis Vantage Pro2 ,51.516,3.65,-2.0,unknown
+IZEELAND8,Schouwen Duiveland ,Nieuwerkerk ,LaCrosse WS 3600 ,51.648,3.994,-3.0,4306 BR
+IZEELAND36,Kalkoensprenk ,Vlissingen ,WS5000 ,51.465,3.578,0.0,4386 DD
+IZEELAND5,Wolphaartsdijk ,Wolphaartsdijk ,Davis Vantage pro2 uv solar ,51.536,3.815,1.0,4471 BK
+IZHBLEIS1,Meteo Bleiswijk ,Bleiswijk ,Davis Vantage Pro 2 ,52.012,4.546,-7.0,2665 WH
+IZHHELLE2,Meteo Hellevoetsluis ,Hellevoetsluis ,Vantage Pro-II ,51.838,4.162,0.0,3225 GN
+IZHLEIDE2,Zusterhof Leiden ,Leiden ,WH-4000 ,52.154,4.491,0.0,2311 PS
+IZHOUDBE2, ,Oud-Beijerland ,DAVIS Vantage VUE ,51.819,4.429,2.0,3261 SC
+IZHROTTE3,Steins Weer Site ,Rotterdam , ,51.941,4.546,0.0,3067 TG
+IZHVLIST2, ,Vlist ,Davis VP2 pro ,51.96,4.846,0.0,2855 AA
+IZUIDHOL131, ,Alphen A/d Rijn , ,52.156,4.649,-3.0,2401 MG
+IZUIDHOL143,Gorinchem ,Gorinchem ,VP2 ,51.837,5.002,2.0,4207 TB
+IZUIDHOL19, ,Leiderdorp ,Davis Vantage Vue ,52.162,4.54,0.0,2353 JM
+IZUIDHOL138, ,Nieuwerkerk Aan Den Ijssel ,davis vantage pro2 ,51.974,4.623,-7.0,2914 PG
+IZUIDHOL144,Vrouwtjeslant Nieuweveen ,Nootdorp ,Oregon Scientific WMR200 uv ,52.051,4.402,0.0,unknown
+IZUIDHOL34,Weerstation Ridderkerk ,Ridderkerk ,Cresta WXR815 ,51.86,4.605,0.0,2985 SB
+IZUIDHOL125,City station surrounded by some trees ,Rijswijk ,Davis Vantage Pro2 (Wireless) ,52.06,4.34,3.0,2281 TH
+IZUIDHOL110,Rozenburg ,Rozenburg ,TFA 35.1099 ,51.904,4.234,0.0,3181 RD
+IZUIDHOL88, ,Zoetermeer ,CRESTA WXR-815LM ,52.046,4.468,-4.0,2719 KD
+IZUIDHOL94,Westland ,'s-Gravenzande ,La Crosse Technology WS 3600 ,52.001,4.174,0.0,2691 WD
+IZUIDHOL36,Weerstation PB2RDF ,Capelle Aan Den IJssel ,Davis Vantage Pro2 Plus 24hr fan 6163EU ,51.95,4.571,4.0,2907 TH
+IZUIDHOL25,Loosduinen ,Den Haag ,Davis Vantage Pro2 Plus Wireless ,52.045,4.237,7.0,2553 NC
+IZUIDHOL92,Wateringse Veld ,Den Haag ,Davis Vantage Vue ,52.03,4.29,0.0,2548 HL
+IZUIDHOL109,Den Haag ,Den Haag ,Davis Vantage Pro-II ,52.081,4.27,6.0,2565 MK
+IZUIDHOL48,Goeree Overflakkee ,Goedereede ,Vantage Pro2 Plus ,51.815,3.979,0.0,3252 LR
+IZUIDHOL99, ,Heerjansdam ,Davis Vantage Pro2 ,51.837,4.57,0.0,2995 VD
+IZUIDHOL115,Weerstation Heinenoord ,Heinenoord ,Davis Vantage Pro2 (Wireless) ,51.814,4.51,0.0,3274 LV
+IZUIDHOL123,Hoek van Holland ,Hoek Van Holland ,Davis Vantage Pro2 ,51.976,4.145,0.0,3151 RP
+IZUIDHOL112,Lisse ,Lisse ,Davis Vantage Vue ,52.265,4.558,7.0,2161 AD
+IZUIDHOL181,Boumare aan de Vliet ,Maasland ,Netatmo Weather Station ,51.931,4.278,-3.0,unknown
+IZUIDHOL120,Goeree-Overflakkee ,Middelharnis ,Davis Vantage Pro 2 Plus ,51.754,4.159,10.0,3241 KC
+IZUIDHOL108,Westlands Weer ,Monster ,Davis Vantage Pro2 ,52.024,4.168,10.0,2681 XS
+IZUIDHOL141,Westland ,MONSTER ,Davis Vantage Pro 2 ,52.039,4.2,0.0,2681 PG
+IZUIDHOL93,Noorden ,Noorden ,Davis Vantage Pro 2 ,52.168,4.826,-3.0,2431 ZD
+IZUIDHOL78, ,Noordwijk ,wh1080 ,52.24,4.447,1.0,2201 PV
+IZUIDHOL118,Noordwijk ,Noordwijk ,WS-4000 v3 ,52.236,4.459,15.0,unknown
+IZUIDHOL61, ,Oud-Beijerland ,Davis Vantage Pro2 (Wireless) ,51.827,4.419,0.0,3261 EL
+IZUIDHOL47,Goeree Overflakkee ,Ouddorp-Zuid ,Vantage Pro2 Plus ,51.807,3.941,0.0,3253 EB
+IZUIDHOL80, ,Poeldijk ,TFA Nexus Pro (Class Str) ,52.025,4.228,0.0,2685 RK
+IHAZERSW1,Hazerswoude-Dorp ,Rijnwoude ,TFA Primus (WS2800) ,52.096,4.592,0.0,2391 DA
+IZUIDHOL136,Kralingseveer ,ROTTERDAM ,Easyweather WS-4000 ,51.91,4.553,0.0,unknown
+IZUIDHOL87,Rotterdam Beverwaard ,Rotterdam Beverwaard ,Davis VP2 ,51.895,4.568,5.0,unknown
+IZUIDHOL106,Liesveld ,Streefkerk ,Davis Vantage Pro 2 Plus ,51.899,4.748,-2.0,2959 CL
+IZUIDHOL29,Weerstation Strijen ,Strijen ,Davis Vantage Pro2 Wireless ,51.74,4.548,0.0,3291 VB
+IZUID-HO15,WeerZoetermeer.nl ,Zoetermeer ,Davis Vantage Pro2 Plus ,52.072,4.511,-3.0,2727 GM
+IZUIDHOL107,Zoetermeer ,Zoetermeer ,Davis VP2 ,52.033,4.497,-7.0,unknown
+IZUIDHOL137,Zuidland ,Zuidland ,Davis pro 2 ,51.812,4.283,1.0,3214 LH
+IZUIDHOL104,Tweemanspolder ,Zuidplas (kern Moerkapelle) ,Alecto WS-4000 ,52.041,4.576,-3.0,2752 BG
+IZUIDHOL97, ,Zwijndrecht ,Alecto WS4000 ,51.817,4.649,0.0,3331 XA
