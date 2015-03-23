@@ -38,31 +38,15 @@ class get_wundergrond_data:
                           'be specified')
         if self.csvfile:
             self.load_csvfile()
-            # TODO: add check if required dict keys exist
             if not opts.stationid:
                 stationids = self.csvdata['Station ID']
             else:
                 self.stationids = [opts.stationid]
-            for self.stationid in stationids:
-                print self.stationid
-                try:
-                    station_index = self.csvdata['Station ID'].index(self.stationid)
-                    self.zipcode = self.csvdata['zipcode'][station_index]
-                    lon = self.csvdata['lon'][station_index]
-                    lat = self.csvdata['lat'][station_index]
-                    height = self.csvdata['height'][station_index]
-                    # create a dictionary for the location
-                    location_items = ['lat', 'lon', 'height']
-                    location = dict(zip(location_items, [lon, lat, height]))
-                except ValueError:
-                    print "stationid not found in csvfile"
-                    # get location and zipcode if not in csvfile
-                    self.location = self.get_station_location(self.stationid)
-                    self.zipcode = self.get_station_zipcode(self.location)
-                self.outputdir = os.path.join(opts.outputdir, self.stationid)
-                if not os.path.exists(self.outputdir):
-                    os.makedirs(self.outputdir)
-                self.get_data()
+        for self.stationid in stationids:
+            self.outputdir = os.path.join(opts.outputdir, self.stationid)
+            if not os.path.exists(self.outputdir):
+                os.makedirs(self.outputdir)            
+            self.get_data()
 
     def get_data(self):
         '''
@@ -70,6 +54,8 @@ class get_wundergrond_data:
             , a startyar, and an endyear. The html file is parsed and written
             as csv to a separate txt file for each day.
         '''
+        logger.info('Download data for stationid: ' + self.stationid +
+                    ' [start]')
         for td in utils.progressbar(range(0, (self.enddate - self.startdate).days +
                                     1), "Downloading: ", 60):
             # increase the date by 1 day for the next download
@@ -110,11 +96,14 @@ class get_wundergrond_data:
                 # close handler and outstream
                 outstream.close()
                 handler.close()
+            logger.info('Download data for stationid: ' + self.stationid +
+                        ' [completed]')
 
     def get_station_location(self, stationid):
         '''
         get the location of a Wunderground stationid
         '''
+        logger.info('Get station location of stationid: ' + stationid)
         # set url to get the location from
         url = 'http://dutch.wunderground.com/personal-weather-station/dashboard?ID=' + stationid
         # open and read url
@@ -126,6 +115,7 @@ class get_wundergrond_data:
         if len(tree) == 1:
             raw_location = str(tree[0].text_content())
         else:
+            logger.error('Cannot parse location from html file')
             raise IOError('Cannot parse location from html file')
         # remove anything non-numeric from the string and create a list
         location_list = [float(s) for s in raw_location.split() if
@@ -135,6 +125,8 @@ class get_wundergrond_data:
         location = dict(zip(location_items, location_list))
         # check if latitude and longitude are not zero
         if int(location['lat']) == 0 or int(location['lon']) == 0:
+            logger.error('Could not extract a valid location for ' +
+                         'stationid: ' + stationid)
             raise ValueError('Could not extract a valid location for ' +
                              'stationid: ' + stationid)
         return location
@@ -145,6 +137,7 @@ class get_wundergrond_data:
         location['lat'] gives latitude of the location
         location['lon'] gives the longitude of the location
         '''
+        logger.info('Get zipcode of stationid: ' + self.stationid)
         # google maps api url
         url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=' + \
             str(location['lat']) + ',' + str(location['lon'])
@@ -165,6 +158,7 @@ class get_wundergrond_data:
         '''
         load data csvfile
         '''
+        logger.info('Load stationdata from csv file')
         with open(self.csvfile, 'r') as csvin:
             reader = csv.DictReader(csvin, delimiter=',')
             try:
