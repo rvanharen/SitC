@@ -1,4 +1,7 @@
+#!/usr/bin/env python2
+
 import logging
+import sys
 
 # define global LOG variables
 DEFAULT_LOG_LEVEL = 'debug'
@@ -11,12 +14,11 @@ LOG_LEVELS_LIST = LOG_LEVELS.keys()
 LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
 DATE_FORMAT = "%Y/%m/%d/%H:%M:%S"
 
-logger = None
-
-
 def start_logging(filename, level=DEFAULT_LOG_LEVEL):
     "Start logging with given filename and level."
-    if logger == None:
+    try:
+        logger
+    except UnboundLocalError:
         logger = logging.getLogger()
     else:  # wish there was a logger.close()
         for handler in logger.handlers[:]:  # make a copy of the list
