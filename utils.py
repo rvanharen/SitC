@@ -2,6 +2,9 @@
 
 import logging
 import sys
+from numpy import sin as npsin
+from numpy import cos as npcos
+from numpy import radians as npradians
 
 # define global LOG variables
 DEFAULT_LOG_LEVEL = 'debug'
@@ -58,3 +61,12 @@ def is_number(s):
     except ValueError:
         pass
     return False
+
+def wind_components(wind_speed, wind_direction):
+    '''
+    return U and V wind components from wind speed and 
+    wind direction (in degrees)
+    '''
+    U = wind_speed * npsin(npradians(wind_direction)) * -1
+    V = wind_speed * npcos(npradians(wind_direction)) * -1
+    return U, V
