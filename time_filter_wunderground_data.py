@@ -25,6 +25,8 @@ class time_filter_ncfile:
         self.filename = filename
         self.timedelta = timedelta
         self.timewindow = timewindow
+        self.var = ['TemperatureC', 'DewpointC', 'PressurehPa', 'Humidity',
+                    'WindSpeedKMH', 'dailyrainMM']
         self.check_file()  # check if file exists and has nc extension
         self.read_ncfile()  # open netCDF file and read variables
         if method == 'interpolate':
@@ -52,7 +54,10 @@ class time_filter_ncfile:
         self.ncfile = ncdf(self.filename, 'r', formate='NETCDF4')
         # load required variables in netCDF file
         time_axis = self.ncfile.variables['time']
-        self.tempC = self.ncfile.variables['TemperatureC'][:]
+        self.variables = {} # create empty dictionary
+        for variable in self.var:
+            # fill dictionary
+            self.variables[variable] = self.ncfile.variables[variable][:]
         # convert time_axis to datetime object
         self.time_cal = netcdftime.num2date(time_axis[:],
                                             units=time_axis.units,
@@ -72,8 +77,7 @@ class time_filter_ncfile:
         timedelta = datetime.timedelta(minutes=int(self.timedelta))
         timewindow = datetime.timedelta(minutes=int(self.timewindow))
         index_array = nparray(range(0, len(self.time_cal)))
-        self.time_out = []
-        self.temp_out = []
+        self.filtered = {}
         min_index = 0
         # loop until we are at the end of the time in the netCDF file
         while current_time < self.time_cal[-1]:
@@ -83,58 +87,67 @@ class time_filter_ncfile:
                 max_index = len(self.time_cal)
             time_window = self.time_cal[min_index:max_index]
             time_index = index_array[min_index:max_index]
-            # check if there is a measurement coinciding with current_time
-            if current_time in time_window:
-                # get index in the temperature array
-                index = time_index[npwhere(time_window == current_time)[0][0]]
-                # extract the value in the temperature array
-                value = self.tempC[index]
-            # if there is no measurement coinciding the current_time,
-            # calculate temperature from nearby measurements within the
-            # defined timewindow
-            else:
+            values = {}
+            for variable in self.var:
+                # check if there is a measurement coinciding with current_time
+                if current_time in time_window:
+                    # get index in the temperature array
+                    index = time_index[npwhere(time_window == current_time)[0][0]]
+                    # extract the value in the temperature array
+                    values[variable] = self.variables[variable][index]
+                # if there is no measurement coinciding the current_time,
+                # calculate temperature from nearby measurements within the
+                # defined timewindow
+                else:
+                    try:
+                        # index of first measurent within timewindow after
+                        # current_time
+                        index_up = time_index[(time_window < (
+                            current_time + timedelta)) & (
+                                time_window > current_time)][0]
+                    except IndexError:
+                        # no measurements within timewindow after current_time
+                        index_up = []
+                    try:
+                        # index of first measurent within timewindow before
+                        # current_time
+                        index_down = time_index[(time_window > (
+                            current_time - timedelta)) & (
+                                time_window < current_time)][-1]
+                    except IndexError:
+                        # no measurements within timewindow before current_time
+                        index_down = []
+                    if not index_up and not index_down:
+                        # no value is found within the timewindow
+                        values[variable] = None
+                    elif not index_up and index_down:
+                        # use first value before current time if no value after
+                        # current time is found in timewindow
+                        values[variable] = self.variables[variable][index_down]
+                    elif index_up and not index_down:
+                        # use first value after current time if no value before
+                        # current time is found in timewindow
+                        values[variable] = self.variables[variable][index_up]
+                    elif index_up and index_down:
+                        # linear interpolation if a value before and after the
+                        # current time is found within the timewindow
+                        total_length = float((self.time_cal[index_up] -
+                                            self.time_cal[index_down]).seconds)
+                        lower_length = float((current_time -
+                                            self.time_cal[index_down]).seconds)
+                        values[variable] = self.variables[variable][
+                            index_down] + (self.variables[variable][
+                                index_up] - self.variables[variable][
+                                    index_down]) * (lower_length/total_length)
+                # append to output
                 try:
-                    # index of first measurent within timewindow after
-                    # current_time
-                    index_up = time_index[(time_window < (
-                        current_time + timedelta)) & (
-                            time_window > current_time)][0]
-                except IndexError:
-                    # no measurements within timewindow after current_time
-                    index_up = []
-                try:
-                    # index of first measurent within timewindow before
-                    # current_time
-                    index_down = time_index[(time_window > (
-                        current_time - timedelta)) & (
-                            time_window < current_time)][-1]
-                except IndexError:
-                    # no measurements within timewindow before current_time
-                    index_down = []
-                if not index_up and not index_down:
-                    # no value is found within the timewindow
-                    value = None
-                elif not index_up and index_down:
-                    # use first value before current time if no value after
-                    # current time is found in timewindow
-                    value = self.tempC[index_down]
-                elif index_up and not index_down:
-                    # use first value after current time if no value before
-                    # current time is found in timewindow
-                    value = self.tempC[index_up]
-                elif index_up and index_down:
-                    # linear interpolation if a value before and after the
-                    # current time is found within the timewindow
-                    total_length = float((self.time_cal[index_up] -
-                                          self.time_cal[index_down]).seconds)
-                    lower_length = float((current_time -
-                                          self.time_cal[index_down]).seconds)
-                    value = self.tempC[index_down] + (
-                        self.tempC[index_up] - self.tempC[index_down]) * (
-                            lower_length/total_length)
-            # append to output
-            self.time_out.append(current_time)
-            self.temp_out.append(value)
+                    self.filtered[variable].append(values[variable])
+                except KeyError:
+                    self.filtered[variable] = [values[variable]]
+            try:
+                self.filtered['datetime'].append(current_time)
+            except KeyError:
+                self.filtered['datetime'] = [current_time]                
             # increment time
             current_time += timedelta
             # update min_index
@@ -155,8 +168,7 @@ class time_filter_ncfile:
         timedelta = datetime.timedelta(minutes=int(self.timedelta))
         timewindow = datetime.timedelta(minutes=int(self.timewindow))
         index_array = nparray(range(0, len(self.time_cal)))
-        self.time_out = []
-        self.temp_out = []
+        self.filtered = {}  # empty dictionary
         min_index = 0
         # loop until we are at the end of the time in the netCDF file
         while current_time < self.time_cal[-1]:
@@ -166,43 +178,53 @@ class time_filter_ncfile:
                 max_index = len(self.time_cal)
             time_window = self.time_cal[min_index:max_index]
             time_index = index_array[min_index:max_index]
-            # check if there is a measurement coinciding with current_time
-            if current_time in time_window:
-                # get index in the temperature array
-                index = time_index[npwhere(time_window == current_time)[0][0]]
-                # extract the value in the temperature array
-                value = self.tempC[index]
-            # if there is no measurement coinciding the current_time,
-            # calculate temperature from nearby measurements within the
-            # defined timewindow
-            else:
-                try:
-                    # index of first measurent within timewindow after
-                    # current_time
-                    index_up = time_index[(time_window < (
-                        current_time + timedelta)) & (
-                            time_window > current_time)]
-                except IndexError:
-                    # no measurements within timewindow after current_time
-                    index_up = []
-                try:
-                    # index of first measurent within timewindow before
-                    # current_time
-                    index_down = time_index[(time_window > (
-                        current_time - timedelta)) & (
-                            time_window < current_time)]
-                except IndexError:
-                    # no measurements within timewindow before current_time
-                    index_down = []
-                if (len(index_up) == 0 and len(index_down) == 0):
-                    # no value is found within the timewindow
-                    value = None
+            values = {}  # empty dictionary
+            for variable in self.var:  # loop over all variables
+                # check if there is a measurement coinciding with current_time
+                if current_time in time_window:
+                    # get index in the temperature array
+                    index = time_index[npwhere(
+                        time_window == current_time)[0][0]]
+                    # extract the value in the temperature array
+                    values[variable] = self.variables[variable][index]
+                # if there is no measurement coinciding the current_time,
+                # calculate temperature from nearby measurements within the
+                # defined timewindow
                 else:
-                    index_both = npconcatenate((index_up, index_down))
-                    value = nanmean(self.tempC[index_both])
-            # append to output
-            self.time_out.append(current_time)
-            self.temp_out.append(value)
+                    try:
+                        # index of first measurent within timewindow after
+                        # current_time
+                        index_up = time_index[(time_window < (
+                            current_time + timedelta)) & (
+                                time_window > current_time)]
+                    except IndexError:
+                        # no measurements within timewindow after current_time
+                        index_up = []
+                    try:
+                        # index of first measurent within timewindow before
+                        # current_time
+                        index_down = time_index[(time_window > (
+                            current_time - timedelta)) & (
+                                time_window < current_time)]
+                    except IndexError:
+                        # no measurements within timewindow before current_time
+                        index_down = []
+                    if (len(index_up) == 0 and len(index_down) == 0):
+                        # no value is found within the timewindow
+                        values[variable] = None
+                    else:
+                        index_both = npconcatenate((index_up, index_down))
+                        values[variable] = nanmean(
+                            self.variables[variable][index_both])
+                # append to output
+                try:
+                    self.filtered[variable].append(values[variable])
+                except KeyError:
+                    self.filtered[variable] = [values[variable]]
+            try:
+                self.filtered['datetime'].append(current_time)
+            except KeyError:
+                self.filtered['datetime'] = [current_time]                
             # increment time
             current_time += timedelta
             # update min_index
