@@ -1,5 +1,19 @@
 #!/usr/bin/env python2
 
+'''
+Description:    Shared functionality:
+                    * start_logging(filename, level=DEFAULT_LOG_LEVEL)
+                    * progressbar(it, prefix="", size=60)
+                    * is_number(s)
+                    * wind_components(wind_speed, wind_direction)
+                    * ismember(a, b)
+Author:         Ronald van Haren, NLeSC (r.vanharen@esciencecenter.nl)
+Created:
+Last Modified:
+License:        Apache 2.0
+Notes:
+'''
+
 import logging
 import sys
 from numpy import sin as npsin
@@ -70,3 +84,14 @@ def wind_components(wind_speed, wind_direction):
     U = wind_speed * npsin(npradians(wind_direction)) * -1
     V = wind_speed * npcos(npradians(wind_direction)) * -1
     return U, V
+
+def ismember(a, b):
+    '''
+    return items in a that are also in b
+    '''
+    bind = {}
+    for i, elt in enumerate(b):
+        if elt not in bind:
+            bind[elt] = i
+    # None can be replaced by any other "not in b" value
+    return [bind.get(itm, None) for itm in a]
