@@ -72,7 +72,14 @@ class get_wundergrond_data:
             # check if we want to keep previous downloaded files
             if self.keep:
                 if os.path.exists(os.path.join(self.outputdir, outputfile)):
-                    continue  # file exists, continue with next iteration
+                    # check if filesize is not null
+                    if os.path.getsize(os.path.join(self.outputdir,
+                                                    outputfile)) > 0:
+                        # file exists and is not null, continue next iteration
+                        continue
+                    else:
+                        # file exists but is null, so remove and redownload
+                        os.remove(os.path.join(self.outputdir, outputfile))
             elif os.path.exists(os.path.join(self.outputdir, outputfile)):
                 os.remove(os.path.join(self.outputdir, outputfile))
             # open outputfile
