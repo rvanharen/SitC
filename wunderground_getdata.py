@@ -24,6 +24,9 @@ import json
 import csv
 from combine_wunderground_data import fitem
 import utils
+from multiprocessing import Pool, Manager, cpu_count
+from wunderground_dump_stationid import progressbar2
+import time
 
 class get_wundergrond_data:
     def __init__(self, opts):
@@ -46,7 +49,7 @@ class get_wundergrond_data:
             self.outputdir = os.path.join(opts.outputdir, self.stationid)
             if not os.path.exists(self.outputdir):
                 os.makedirs(self.outputdir)            
-            self.get_data()
+            self.get_data2()
 
     def get_data(self):
         '''
@@ -187,6 +190,90 @@ class get_wundergrond_data:
                     if k is not None:  # skip over empty fields
                         k = k.strip()
                         self.csvdata[k].append(fitem(v))                 
+
+    def get_data2(self):
+        '''
+        Download data from Weather Underground website for a given stationid
+            , a startyar, and an endyear. The html file is parsed and written
+            as csv to a separate txt file for each day.
+        '''
+        logger.info('Download data for stationid: ' + self.stationid +
+                    ' [start]')
+        pool = Pool(4) # process per core
+        m = Manager()
+        q = m.Queue()
+        args = [(self.stationid, self.startdate, td, self.outputdir,
+                 self.keep, q) for td in range(0, (
+                     self.enddate - self.startdate).days + 1)]
+        ndays =  range(0, (self.enddate - self.startdate).days + 1)
+        result = pool.map_async(getd, args)
+        # monitor loop
+        while True:
+            if result.ready():
+                progressbar2(len(ndays), len(ndays), prefix="Downloading " +
+                             self.stationid + ": ", size=60)
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+                break
+            else:
+                length = q.qsize()            
+                progressbar2(length, len(ndays), prefix="Downloading " +
+                             self.stationid + ": ", size=60)
+                time.sleep(1)
+       
+ 
+      
+def getd(args):
+    stationid, startdate, td, outputdir, keep, q = args
+    q.put(td)
+    # increase the date by 1 day for the next download
+    current_date = startdate + timedelta(days=td)
+    # set download url
+    url = 'http://www.wunderground.com/weatherstation/WXDailyHistory.asp?ID=' + \
+        stationid + '&day=' + str(current_date.day) + '&year=' + \
+        str(current_date.year) + '&month=' + \
+        str(current_date.month) + '&format=1'
+    # define outputfile
+    outputfile = stationid + '_' + str(current_date.year) \
+        + str(current_date.month).zfill(2) + \
+        str(current_date.day).zfill(2) + '.txt'
+    # check if we want to keep previous downloaded files
+    if keep:
+        if os.path.exists(os.path.join(outputdir, outputfile)):
+            # check if filesize is not null
+            if os.path.getsize(os.path.join(outputdir,
+                                            outputfile)) > 0:
+                # file exists and is not null, continue next iteration
+                return
+            else:
+                # file exists but is null, so remove and redownload
+                os.remove(os.path.join(outputdir, outputfile))
+        elif os.path.exists(os.path.join(outputdir, outputfile)):
+            os.remove(os.path.join(outputdir, outputfile))
+    # open outputfile
+    with open(os.path.join(outputdir, outputfile), 'wb') as outfile:
+        # open and read the url
+        handler = urllib2.urlopen(url)
+        content = handler.read()
+        # convert spaces to non-breaking spaces
+        content = content.replace(' ', '&nbsp;')
+        # Removing all the HTML tags from the file
+        outstream = cStringIO.StringIO()
+        parser = htmllib.HTMLParser(
+            formatter.AbstractFormatter(
+                formatter.DumbWriter(outstream)))
+        parser.feed(content)
+        # convert spaces back to regular whitespace (' ')
+        content = outstream.getvalue().replace('\xa0', ' ')
+        # write output
+        outfile.write(content)
+        # close handler and outstream
+        outstream.close()
+        handler.close()
+    logger.info('Download data for stationid: ' + stationid +
+                ' [completed]')
+    return
+
 
 
 if __name__ == "__main__":
