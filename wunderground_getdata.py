@@ -224,7 +224,9 @@ class get_wundergrond_data:
                 progressbar2(length, len(ndays), prefix="Downloading " +
                              self.stationid + ": ", size=60)
                 time.sleep(1)
-
+        # clean up
+        pool.close()
+        pool.join()
 
 def get_daily_wunderground(args):
     '''

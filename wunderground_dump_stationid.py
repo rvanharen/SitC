@@ -55,6 +55,9 @@ def get_stationids(processes=cpu_count()):
             progressbar2(length, len(data), prefix="Extracting: ", size=60)
             time.sleep(1)
     data_out = result.get()
+    # clean up
+    pool.close()
+    pool.join()
     # check if the output datat and header have the same dimension
     if len(data_out[0]) == len(header):
         # add the header to the output data if they have the same dimension
@@ -178,5 +181,4 @@ def progressbar2(_i, count, prefix="", size=60):
 
 if __name__ == "__main__":
     stationdata = get_stationids(processes=8)
-    import pdb; pdb.set_trace()
     dump_stationids(stationdata)
