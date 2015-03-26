@@ -28,6 +28,7 @@ from multiprocessing import Pool, Manager, cpu_count
 from wunderground_dump_stationid import progressbar2
 import time
 
+
 class get_wundergrond_data:
     def __init__(self, opts):
         self.outputdir = opts.outputdir
@@ -36,6 +37,7 @@ class get_wundergrond_data:
         self.keep = opts.keep
         self.startdate = date(opts.startyear, 1, 1)
         self.enddate = date(opts.endyear, 12, 31)
+        self.processes = 8  # number of simultaneous processes/downloads
         if not any([opts.stationid, self.csvfile]):
             raise IOError('stationid or csv file with stationids should ' +
                           'be specified')
@@ -48,19 +50,20 @@ class get_wundergrond_data:
         for self.stationid in stationids:
             self.outputdir = os.path.join(opts.outputdir, self.stationid)
             if not os.path.exists(self.outputdir):
-                os.makedirs(self.outputdir)            
-            self.get_data2()
+                os.makedirs(self.outputdir)
+            self.get_data_multiprocessing()
 
     def get_data(self):
         '''
         Download data from Weather Underground website for a given stationid
             , a startyar, and an endyear. The html file is parsed and written
             as csv to a separate txt file for each day.
+            [singleprocessing code, deprecated]
         '''
         logger.info('Download data for stationid: ' + self.stationid +
                     ' [start]')
-        for td in utils.progressbar(range(0, (self.enddate - self.startdate).days +
-                                    1), "Downloading: ", 60):
+        for td in utils.progressbar(range(0, (self.enddate - self.startdate)
+                                          .days + 1), "Downloading: ", 60):
             # increase the date by 1 day for the next download
             current_date = self.startdate + timedelta(days=td)
             # set download url
@@ -177,7 +180,7 @@ class get_wundergrond_data:
                 reader.next()
                 try:
                     self.csvdata = {k.strip(): [fitem(v)] for k, v in
-                                 reader.next().items()}
+                                    reader.next().items()}
                 except StopIteration:
                     pass
             current_row = 0
@@ -189,24 +192,25 @@ class get_wundergrond_data:
                 for k, v in line.items():
                     if k is not None:  # skip over empty fields
                         k = k.strip()
-                        self.csvdata[k].append(fitem(v))                 
+                        self.csvdata[k].append(fitem(v))
 
-    def get_data2(self):
+    def get_data_multiprocessing(self):
         '''
         Download data from Weather Underground website for a given stationid
             , a startyar, and an endyear. The html file is parsed and written
             as csv to a separate txt file for each day.
+            [multiprocessing code]
         '''
         logger.info('Download data for stationid: ' + self.stationid +
                     ' [start]')
-        pool = Pool(4) # process per core
+        pool = Pool(self.processes)  # number of processes
         m = Manager()
         q = m.Queue()
         args = [(self.stationid, self.startdate, td, self.outputdir,
                  self.keep, q) for td in range(0, (
                      self.enddate - self.startdate).days + 1)]
-        ndays =  range(0, (self.enddate - self.startdate).days + 1)
-        result = pool.map_async(getd, args)
+        ndays = range(0, (self.enddate - self.startdate).days + 1)
+        result = pool.map_async(get_daily_wunderground, args)
         # monitor loop
         while True:
             if result.ready():
@@ -216,15 +220,27 @@ class get_wundergrond_data:
                 sys.stdout.flush()
                 break
             else:
-                length = q.qsize()            
+                length = q.qsize()
                 progressbar2(length, len(ndays), prefix="Downloading " +
                              self.stationid + ": ", size=60)
                 time.sleep(1)
-       
- 
-      
-def getd(args):
+
+
+def get_daily_wunderground(args):
+    '''
+    Download Wunderground for a supplied station and date.
+    Input argument args consists of (stationid, startdate, td, outputdir,
+        keep, q), where
+        stationid: stationid on Wunderground website
+        startdate: date from which current date is calculated from using td
+        td: timedelta in days from startdate
+        outputdir: output directory where files are saved
+        keep: True if already downloaded files of not size NULL are kept
+        q: iterator queue for multiprocessing
+    '''
+    # input arguments of the function
     stationid, startdate, td, outputdir, keep, q = args
+    # increase multiprocessing iterator queue for progressbar2
     q.put(td)
     # increase the date by 1 day for the next download
     current_date = startdate + timedelta(days=td)
@@ -275,7 +291,6 @@ def getd(args):
     return
 
 
-
 if __name__ == "__main__":
     # define argument menu
     description = 'Combine csv files weather underground in one output file'
@@ -293,9 +308,9 @@ if __name__ == "__main__":
                         required=False, action='store')
     parser.add_argument('-k', '--keep', help='Keep downloaded files',
                         required=False, action='store_true')
-    parser.add_argument('-l', '--log', help='Log level', 
+    parser.add_argument('-l', '--log', help='Log level',
                         choices=utils.LOG_LEVELS_LIST,
-                        default=utils.DEFAULT_LOG_LEVEL)    
+                        default=utils.DEFAULT_LOG_LEVEL)
     # extract user entered arguments
     opts = parser.parse_args()
     # define logger
