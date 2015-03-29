@@ -19,6 +19,7 @@ import sys
 from numpy import sin as npsin
 from numpy import cos as npcos
 from numpy import radians as npradians
+import csv
 
 # define global LOG variables
 DEFAULT_LOG_LEVEL = 'debug'
@@ -95,3 +96,9 @@ def ismember(a, b):
             bind[elt] = i
     # None can be replaced by any other "not in b" value
     return [bind.get(itm, None) for itm in a]
+
+def write_csvfile(csvfile, data_out):
+    # TODO: check if csv file exists already
+    with open(csvfile, 'w') as fp:
+        a = csv.writer(fp, delimiter=',')
+        a.writerows(data_out)
