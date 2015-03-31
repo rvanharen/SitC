@@ -20,10 +20,21 @@ from numpy import unique
 from numpy import delete as npdelete
 from numpy import array as nparray
 from numpy import bincount
+from numpy import percentile as nppercentile
+from numpy import newaxis as npnewaxis
+from numpy import meshgrid as npmeshgrid
+from numpy import concatenate
+from numpy import arange as nparange
+from numpy import where as npwhere
 import os
 from datetime import datetime
 from time_filter_wunderground_data import time_filter_ncfile
 import utils
+import operator
+from netCDF4 import Dataset as ncdf
+from osgeo import osr, gdal
+from math import sqrt
+
 
 class load_reference_data:
     def __init__(self, filename):
@@ -71,9 +82,17 @@ class load_reference_data:
         '''
         process the reference csv data
         '''
-        # Convert time to datetime.datetime object
-        dtime = [datetime.strptime(str(item), ('%Y%m%d')) for item in
-                 self.csvdata['YYYYMMDD']]
+        ## Convert time to datetime.datetime object
+        # hours should be 0-23 instead of 1-24
+        self.csvdata['HH'] = [item if item!=24 else 0 for item in
+                              self.csvdata['HH']]
+        # combine date and hour into one string
+        dstring = [str(self.csvdata['YYYYMMDD'][idx]) +
+                   str(self.csvdata['HH'][idx]).zfill(2) for idx in
+                   range(0,len(self.csvdata['YYYYMMDD']))]
+        # create datetime object
+        self.csvdata['datetime'] = [datetime.strptime(
+            str(item), ('%Y%m%d%H')) for item in dstring]        
         # rain is (-1 for <0.05 mm), set to 0
         self.csvdata['RH'] = [0 if item == -1 else
                                   item for item in self.csvdata['RH']]
@@ -97,7 +116,7 @@ class load_reference_data:
         for index, item in enumerate(self.csvdata['RH']):
             self.csvdata['api'][index] = c * item + self.csvdata['api'][index-1]
 
-class UHI:
+class calculate_UHI:
     '''
     class description
     '''
@@ -120,13 +139,197 @@ class UHI:
         uniqueID, uniqueInd, uniqueCounts = unique(hoursx, return_inverse=True,
                                                    return_counts=True)
         temp = [float(item) for item in self.wund_data['TemperatureC']]  # ugly hack
-        mtemp = bincount(uniqueInd, weights = temp) / uniqueCounts
-        # TODO: check if mtemp starts from 00 or from another time
-        import pdb; pdb.set_trace()
+        # calculate average temperature for each hour of the day 
+        # starts at 00h
+        #mtemp = bincount(uniqueInd, weights = temp) / uniqueCounts
+        
+        # temporary code
+        aaa=reference_data['datetime']
+        bbb=filtered_wund_data.filtered['datetime']
+        ccc = utils.ismember(aaa, bbb)
+        ccc2 = utils.ismember(bbb, aaa)
+        tru = [reference_data['T'][i] for i in ccc2 if i is not None]
+        turn = [filtered_wund_data.filtered['TemperatureC'][i] for i in ccc if i is not None]
+        dtime = [aaa[i].hour for i in ccc2 if i is not None]
+        uniqueID, uniqueInd, uniqueCounts = unique(dtime, return_inverse=True,
+                                                   return_counts=True)
+        
+        from pylab import hist, show
+        from numpy import sort
+        UHI = nparray(turn) - nparray(tru)
+        self.UHI95 = nppercentile(UHI,95)
+        self.UHI_cycle = bincount(uniqueInd, weights = UHI) / uniqueCounts
+        
+        #UHI(sort(nparray(turn)-nparray(tru))[75:],100)
+        #show()
+
+class find_reference_location:
+    '''
+    find the closest reference station for a given stationid
+    '''
+    def __init__(self, stationid):
+        self.csvfile = 'knmi_reference_data.csv'
+        self.load_reference_locations()
+    def load_reference_locations(self):
+        '''
+        load data csvfile
+        '''
+        logger.info('Load stationdata from csv file')
+        with open(self.csvfile, 'r') as csvin:
+            reader = csv.DictReader(csvin, delimiter=',')
+            try:
+                self.csvdata
+            except AttributeError:
+                reader.next()
+                try:
+                    self.csvdata = {k.strip(): [fitem(v)] for k, v in
+                                    reader.next().items()}
+                except StopIteration:
+                    pass
+            current_row = 0
+            for line in reader:
+                current_row += 1
+                if current_row == 1:  # header
+                    # skip the header
+                    continue
+                for k, v in line.items():
+                    if k is not None:  # skip over empty fields
+                        k = k.strip()
+                        self.csvdata[k].append(fitem(v))
+        self.csvdata['station_id'] = [int(c) for c in
+                                      self.csvdata['station_id']]
+    def calculate_distance_to_reference_locations(self):
+        pass
+    def closest_reference_location(self):
+        pass
+    
+def load_csv_data(csvfile):
+    '''
+    load data csvfile
+    '''
+    logger.info('Load stationdata from csv file')
+    with open(csvfile, 'r') as csvin:
+        reader = csv.DictReader(csvin, delimiter=',')
+        try:
+            csvdata
+        except UnboundLocalError:
+            reader.next()
+            try:
+                csvdata = {k.strip(): [fitem(v)] for k, v in
+                                reader.next().items()}
+            except StopIteration:
+                pass
+        current_row = 0
+        for line in reader:
+            current_row += 1
+            if current_row == 1:  # header
+                # skip the header
+                continue
+            for k, v in line.items():
+                if k is not None:  # skip over empty fields
+                    k = k.strip()
+                    csvdata[k].append(fitem(v))
+    return csvdata
+#    self.csvdata['station_id'] = [int(c) for c in
+#                                  self.csvdata['station_id']]
+
+def find_zipcode_map(lon_in, lat_in):
+    '''
+    description
+    '''
+    ## convert lon_in, lat_in to EPSG:28992 spatial reference system
+    # target spatial reference system
+    tgt_srs=osr.SpatialReference()
+    tgt_srs.ImportFromEPSG(28992)
+    # source spatial reference system
+    src_srs=osr.SpatialReference()
+    src_srs.ImportFromEPSG(4326)
+    # transformed lon_in and lat_in coordinates
+    # TODO: check if [lon_in, lat_in] is correct order!
+    lon_in_t, lat_in_t = utils.ReprojectCoords(
+        [lon_in, lat_in], src_srs, tgt_srs)
+    # open geotif
+    dataset = gdal.Open("zipcode/buurt_inw.tif", gdal.GA_ReadOnly)
+    # create lon/lat arrays of geotif
+    gt = dataset.GetGeoTransform()
+    cols = dataset.RasterXSize
+    rows = dataset.RasterYSize
+    lon = gt[0] + gt[1]*nparange(0,cols)
+    lat = gt[3] + gt[5]*nparange(0,rows)    
+    #ncfile = ncdf('zipcode/conv_ufrac.tif.nc', 'r', formate='NETCDF4')
+    #lon = ncfile.variables['lon'][:]
+    #lat = ncfile.variables['lat'][:]
+    lon_window = lon[(lon>lon_in_t - 250) & (lon<lon_in_t + 250)]
+    lat_window = lat[(lat>lat_in_t - 250) & (lat<lat_in_t + 250)]
+    lonx, latx = npmeshgrid(lon_window,lat_window)
+    lonx = lonx.reshape(-1)
+    latx = latx.reshape(-1)
+    #distance = [utils.haversine(lon_in, lat_in, lonx[idx], latx[idx]) for idx
+    #            in range(0,len(lonx))]
+    distance = [sqrt((lon_in-lonx[idx])**2 + (lat_in-latx[idx])**2) for idx
+                in range(0,len(lonx))]
+    # find index of closest reference station to wunderground station
+    min_index, min_value = min(enumerate(distance), key=operator.itemgetter(1))
+    lon_sel, lat_sel = lonx[min_index], latx[min_index]
+    # indices of gridpoint
+    lat_idx = lat[:].tolist().index(lat_sel)
+    lon_idx = lon[:].tolist().index(lon_sel)
+    # extract gridpoint
+    inwfrac = dataset.GetRasterBand(1).ReadAsArray()[lat_idx,lon_idx]
+    dataset = None  # close geotiff
+    # green fraction
+    dataset = gdal.Open("zipcode/conv_green.tif", gdal.GA_ReadOnly)
+    greenfrac = dataset.GetRasterBand(1).ReadAsArray()[lat_idx,lon_idx]
+    dataset = None  # close geotiff
+    # urban fraction
+    dataset = gdal.Open("zipcode/conv_ufrac.tif", gdal.GA_ReadOnly)
+    ufrac = dataset.GetRasterBand(1).ReadAsArray()[lat_idx,lon_idx]
+    dataset = None  # close geotiff
+    # return 
+    return [ufrac, greenfrac, inwfrac]
 
 if __name__ == "__main__":
-    filename = 'schiphol/uurgeg_240_2011-2020.zip'
-    reference_data = load_reference_data(filename)
-    filtered_wund_data = time_filter_ncfile('INOORDHO63.nc', 60, 30, 'average')
-    UHI(reference_data.csvdata, filtered_wund_data.filtered)
+    stationids = ['IGELDERL63', 'ILIMBURG29', 'IGELDERL5']
+    # define logger
+    logname = os.path.basename(__file__) + '.log'
+#    logger = utils.start_logging(filename=logname, level=opts.log)
+    logger = utils.start_logging(filename=logname, level='info')
+    # load csv file KNMI reference stations
+    reference_stations = load_csv_data('knmi_reference_data.csv')
+    # station_ids were converted to floats when reading csvdata, convert to int
+    reference_stations['station_id'] = [int(c) for c in
+                                        reference_stations['station_id']]
+    # load csv file wunderground stations
+    wunderground_stations = load_csv_data('wunderground_stations.csv')
+    for stationid in stationids:
+        # find index of wunderground station
+        index_wunderground = wunderground_stations['Station ID'].index(stationid)
+        # calculate distance of wunderground station to all KNMI reference stations
+        distance = [utils.haversine(
+            wunderground_stations['lon'][index_wunderground],
+            wunderground_stations['lat'][index_wunderground],
+            reference_stations['longitude'][idx],
+            reference_stations['latitude'][idx]) for idx in range(
+                0,len(reference_stations['longitude']))]
+        # find index of closest reference station to wunderground station
+        min_index, min_value = min(enumerate(distance), key=operator.itemgetter(1))
+        # generate filename of closest reference station
+        filename = 'KNMI/uurgeg_' + str(reference_stations[
+            'station_id'][min_index]) + '_2011-2020.zip'
+        reference_data = load_reference_data(filename)
+        filtered_wund_data = time_filter_ncfile(stationid + '.nc', 60, 6, 'average')
+        UHI_station = [wunderground_stations['lat'][index_wunderground],
+            wunderground_stations['lon'][index_wunderground],
+            calculate_UHI(reference_data.csvdata,
+                            filtered_wund_data.filtered).UHI95]
+        zipcode = find_zipcode_map(
+            wunderground_stations['lon'][index_wunderground],
+            wunderground_stations['lat'][index_wunderground])
+        # combine UHI_station and zipcode
+        UHIzip_station = concatenate((UHI_station, zipcode))
+        try:
+            UHIzip = vstack((UHIzip, UHIzip_station))
+        except NameError:
+            UHIzip = UHIzip_station
+        import pdb; pdb.set_trace()
     import pdb; pdb.set_trace()
