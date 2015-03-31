@@ -26,7 +26,9 @@ import time
 from dateutil import tz
 import argparse
 import itertools
-
+from numpy import nan as npnan
+from numpy import concatenate as npconcatenate
+import utils
 
 class process_raw_data:
     ''''
@@ -36,14 +38,20 @@ class process_raw_data:
     def __init__(self, opts):
         # set class variables
         self.inputdir = opts.inputdir
+        print self.inputdir
         self.outputdir = opts.outputdir
         # define filename as basename inputdir with .nc extension
         filename = os.path.basename(self.inputdir) + '.nc'
         self.outputfile = os.path.join(self.outputdir, filename)
+        if os.path.exists(os.path.join(self.outputfile)):
+            # check if filesize is not null
+            if os.path.getsize(os.path.join(self.outputfile)) > 0:
+                # file exists and is not null, continue next iteration
+                return        
         # do we want to hardcode this?
         self.get_field_names()
-        self.dateUTCstring = [s for s in self.field_names if "DateUTC" in s][0]
-        self.field_names.append('<br>')
+        self.dateUTCstring = [s for s in self.field_names if s is not None and "DateUTC" in s][0]
+        #self.field_names.append('<br>')
         # call functions
         self.combine_raw_data()
         self.write_combined_data_netcdf()
@@ -59,15 +67,14 @@ class process_raw_data:
             raise IOError('No files found in ' + self.inputdir)
         for inputfile in filelist:
             with open(inputfile, 'r') as csvin:
-                reader = csv.DictReader(csvin, fieldnames=self.field_names,
-                                        delimiter=',')
+                reader = csv.DictReader(csvin, delimiter=',')
                 try:
                     self.data
                 except AttributeError:
-                    reader.next()
+                    #reader.next()
                     try:
                         self.data = {k.strip(): [fitem(v)] for k, v in
-                                     reader.next().items()}
+                                     reader.next().items() if k is not None}
                     except StopIteration:
                         pass
                 current_row = 0
@@ -86,10 +93,30 @@ class process_raw_data:
                         except ValueError:
                             # Not a valid csv line, so skip
                             continue
+                    lenDateUTC = len(self.data['DateUTC'])
                     for k, v in line.items():
-                        if k is not None:  # skip over empty fields
+                        if k is not None and k in self.data.keys():  # skip over empty fields
                             k = k.strip()
+                            try:
+                                addnones = lenDateUTC - len(self.data[k])
+                            except NameError:
+                                addnones = 0
+                            if addnones > 0:
+                                toadd = ['' for c in range(0,addnones)]
+                                self.data[k] = npconcatenate((
+                                    self.data[k], toadd)).tolist()
                             self.data[k].append(fitem(v))
+        # check if we need to add empty values at the end of the lists
+        lenDateUTC = len(self.data['DateUTC'])
+        for var in self.data.keys():
+            try:
+                addnones = lenDateUTC - len(self.data[var])
+            except NameError:
+                addnones = 0
+            if addnones > 0:
+                toadd = ['' for c in range(0,addnones)]
+                self.data[var] = npconcatenate((
+                    self.data[var], toadd)).tolist()         
         # verify that everything is sorted with time
         if not self.verify_sorting():
             # sort data if needed according to time
@@ -143,14 +170,21 @@ class process_raw_data:
         timevar2.long_name = 'time in local time Europe/Amsterdam'
 
         # create other variables in netcdf file
-        for self.variable in self.field_names:
-            if self.variable not in [self.dateUTCstring, 'Time', '<br>']:
+        for self.variable in self.data.keys():
+            if self.variable not in [self.dateUTCstring, 'Time', '<br>', None]:
                 # add variables in netcdf file
+                # convert strings to npnan if array contains numbers
+                if True in [utils.is_number(c)
+                            for c in self.data[self.variable]]:
+                    self.data[self.variable] = [npnan if isinstance(
+                        fitem(c), str) else fitem(c) for c in self.data[
+                            self.variable]]
                 # check if variable is a string
                 if not isinstance(self.data[self.variable][1], str):
                     # fill variable
                     if self.variable == 'SolarRadiationWatts/m^2':
-                        variableName = 'SolarRadiation'
+                        #variableName = 'SolarRadiation'
+                        continue
                     else:
                         variableName = self.variable
                     self.values = ncfile.createVariable(
@@ -168,13 +202,17 @@ class process_raw_data:
                     # for strings the syntax is slightly different
                     self.values = self.data[self.variable][1:]
                 self.fill_attribute_data()
-
+                
     def fill_attribute_data(self):
         '''
         Function that fills the attribute data of the netcdf file
         '''
         if self.variable == 'TemperatureC':
             self.values.units = 'C'
+            self.values.standard_name = 'air_temperature'
+            self.values.long_name = 'air temperature'
+        elif self.variable == 'TemperatureF':
+            self.values.units = 'F'
             self.values.standard_name = 'air_temperature'
             self.values.long_name = 'air temperature'
         elif self.variable == 'DewpointC':
@@ -185,6 +223,7 @@ class process_raw_data:
             self.values.units = 'hPa'
             self.values.long_name = 'surface pressure'
             self.values.standard_name = 'surface_air_pressure'
+        elif self.variable == 'PressureIn':
             pass
         elif self.variable == 'WindDirection':
             pass
@@ -217,7 +256,8 @@ class process_raw_data:
             self.values.units = 'Watts/m2'
             self.values.long_name = 'solar radiation'
         else:
-            raise Exception('Unkown field name ' + self.variable)
+            pass
+            #raise Exception('Unkown field name ' + self.variable)
 
     def write_combined_data_csv(self):
         '''
@@ -243,7 +283,7 @@ class process_raw_data:
         self.data['DateUTC'][1:]
         '''
         idx_sort = argsort(self.data[self.dateUTCstring][1:])
-        for field_name in self.field_names:
+        for field_name in self.data.keys():
             if field_name is not self.dateUTCstring:
                 self.data[field_name][1:] = nparray(
                     self.data[field_name][1:])[idx_sort].tolist()
@@ -255,9 +295,13 @@ class process_raw_data:
             with open(inputfile, 'r') as csvin:
                 reader = csv.DictReader(csvin, delimiter=',')
                 # loader header information
-                self.field_names = {k: [v] for k, v in
-                                    reader.next().items()}
-                self.field_names = self.field_names[None][0][:]
+                try:
+                    self.field_names = {k: [v] for k, v in
+                                        reader.next().items()}
+                    self.field_names = self.field_names.keys()
+                #self.field_names = self.field_names[None][0][:]
+                except StopIteration:
+                    pass
                 try:
                     reader.next()
                     # first txt file with data in it found
@@ -268,7 +312,10 @@ class process_raw_data:
 
 
 def fitem(item):
-    item = item.strip()
+    try:
+        item = item.strip()
+    except AttributeError:
+        pass
     try:
         item = float(item)
     except ValueError:
