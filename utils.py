@@ -21,6 +21,7 @@ from numpy import cos as npcos
 from numpy import radians as npradians
 import csv
 from math import radians, cos, sin, asin, sqrt
+from osgeo import osr
 
 # define global LOG variables
 DEFAULT_LOG_LEVEL = 'debug'
@@ -118,3 +119,26 @@ def haversine(lon1, lat1, lon2, lat2):
     c = 2 * asin(sqrt(a)) 
     km = 6367 * c
     return km
+
+def ReprojectCoords(coords,src_srs,tgt_srs):
+    ''' Reproject a list of x,y coordinates.
+
+        @type geom:     C{tuple/list}
+        @param geom:    List of [[x,y],...[x,y]] coordinates
+        @type src_srs:  C{osr.SpatialReference}
+        @param src_srs: OSR SpatialReference object
+        @type tgt_srs:  C{osr.SpatialReference}
+        @param tgt_srs: OSR SpatialReference object
+        @rtype:         C{tuple/list}
+        @return:        List of transformed [[x,y],...[x,y]] coordinates
+
+        tgt_srs and src_srs can be defined in a way similar to:
+            tgt_srs=osr.SpatialReference()
+            tgt_srs.ImportFromEPSG(28992)
+            src_srs=osr.SpatialReference()
+            src_srs.ImportFromEPSG(4326)
+    '''
+    trans_coords=[]
+    transform = osr.CoordinateTransformation( src_srs, tgt_srs)
+    x,y,z = transform.TransformPoint(coords[0],coords[1])
+    return x, y, z 
