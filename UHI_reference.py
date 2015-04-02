@@ -350,48 +350,12 @@ def main(opts):
             reference_stations['latitude'][idx]) for idx in range(
                 0,len(reference_stations['longitude']))]
         # find index of closest reference station to wunderground station
-        min_index, min_value = min(enumerate(distance), key=operator.itemgetter(1))
-        
-        stime = time()     
-        # add check for filesize 0
+        min_index, min_value = min(enumerate(distance),
+                                   key=operator.itemgetter(1))
         filenameKNMI = 'pickled/KNMI_uurgeg_' + str(reference_stations[
             'station_id'][min_index]) + '.pckl'        
-        if not os.path.isfile(filenameKNMI):
-            # save filtered as a pickled object
-            if not os.path.isdir('pickled'):
-                os.mkdir('pickled')  # create pickled dir if it does not exist yet
-            # generate filename of closest reference station
-            filename = 'KNMI/uurgeg_' + str(reference_stations[
-                'station_id'][min_index]) + '_2001-2010.zip'
-            filename2 = 'KNMI/uurgeg_' + str(reference_stations[
-                'station_id'][min_index]) + '_2011-2020.zip'        
-            dict1 = load_reference_data(filename).csvdata
-            dict2 = load_reference_data(filename2).csvdata
-            # combine dicts
-            reference_data = dict((k, concatenate((dict1.get(k), dict2.get(k))))
-                                for k in set(dict1.keys() + dict2.keys()))
-            f = open(filenameKNMI, 'w')
-            pickle.dump(reference_data, f, -1)
-            f.close()                        
-        else:
-            f = open(filenameKNMI)
-            reference_data = pickle.load(f)
-            f.close()
-        print time() - stime
-        # TODO: use a directory with arguments supplied to the function
-        if not os.path.isfile('pickled/' + stationid + '.pckl'): # add check for filesize 0
-            filtered_wund_data = time_filter_ncfile(stationid + '.nc', 60, 10, 'average', 'JJA', 'night')
-            # save filtered as a pickled object
-            if not os.path.isdir('pickled'):
-                os.mkdir('pickled')  # create pickled dir if it does not exist yet
-            filename = 'pickled/' + stationid +'.pckl'
-            f = open(filename, 'w')
-            pickle.dump(filtered_wund_data, f, -1)
-            f.close()            
-        else:
-            f = open('pickled/' + stationid + '.pckl')
-            filtered_wund_data = pickle.load(f)
-            f.close()
+        reference_data = calculate_load_knmi_data(filenameKNMI)
+        filtered_wund_data = calculate_load_wund_data(stationid)
         UHI = calculate_UHI(reference_data,
                       filtered_wund_data.filtered)
         if UHI.corrcoef < 0.7:
@@ -411,6 +375,55 @@ def main(opts):
             UHIzip = UHIzip_station
     import pdb; pdb.set_trace()
 
+def calculate_load_wund_data(stationid):
+    '''
+    description
+    '''
+    if not os.path.isfile('pickled/' + stationid + '.pckl'): # add check for filesize 0
+        filtered_wund_data = time_filter_ncfile(stationid + '.nc', 60, 10,
+                                                'average', 'JJA', 'night')
+        # save filtered as a pickled object
+        if not os.path.isdir('pickled'):
+            # create pickled dir if it does not exist yet
+            os.mkdir('pickled')
+            filename = 'pickled/' + stationid +'.pckl'
+        f = open(filename, 'w')
+        pickle.dump(filtered_wund_data, f, -1)
+        f.close()            
+    else:
+        f = open('pickled/' + stationid + '.pckl')
+        filtered_wund_data = pickle.load(f)
+        f.close()
+    return filtered_wund_data
+
+def calculate_load_knmi_data(filenameKNMI):
+    '''
+    description
+    '''
+    # add check for filesize 0        
+    if not os.path.isfile(filenameKNMI):
+        # save filtered as a pickled object
+        if not os.path.isdir('pickled'):
+            os.mkdir('pickled')  # create pickled dir if it does not exist yet
+        # generate filename of closest reference station
+        filename = 'KNMI/uurgeg_' + str(reference_stations[
+            'station_id'][min_index]) + '_2001-2010.zip'
+        filename2 = 'KNMI/uurgeg_' + str(reference_stations[
+            'station_id'][min_index]) + '_2011-2020.zip'        
+        dict1 = load_reference_data(filename).csvdata
+        dict2 = load_reference_data(filename2).csvdata
+        # combine dicts
+        reference_data = dict((k, concatenate((dict1.get(k), dict2.get(k))))
+                            for k in set(dict1.keys() + dict2.keys()))
+        f = open(filenameKNMI, 'w')
+        pickle.dump(reference_data, f, -1)
+        f.close()                        
+    else:
+        f = open(filenameKNMI)
+        reference_data = pickle.load(f)
+        f.close()
+    return reference_data
+    
 def merge_two_dicts(x, y):
     '''Given two dicts, merge them into a new dict as a shallow copy.'''
     z = x.copy()
