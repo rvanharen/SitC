@@ -26,15 +26,21 @@ from numpy import meshgrid as npmeshgrid
 from numpy import concatenate
 from numpy import arange as nparange
 from numpy import where as npwhere
+from numpy import isnan
 import os
 from datetime import datetime
+from datetime import date
+from datetime import timedelta
 from time_filter_wunderground_data import time_filter_ncfile
 import utils
 import operator
 from netCDF4 import Dataset as ncdf
 from osgeo import osr, gdal
 from math import sqrt
-
+import argparse
+import cPickle as pickle
+from numpy import corrcoef as npcor
+from time import time
 
 class load_reference_data:
     def __init__(self, filename):
@@ -68,8 +74,11 @@ class load_reference_data:
                 if len(row) > 0:
                     # strip data in row and convert to int
                     # empty fiels are filled with -999
-                    data_row = [int(item.strip()) if item.strip() else -999 for
+                    try:
+                        data_row = [int(item.strip()) if item.strip() else -999 for
                                 item in row if item]
+                    except ValueError:
+                        import pdb; pdb.set_trace()
                     # create array with output data
                     try:
                         csvdata = vstack((csvdata, data_row))
@@ -145,21 +154,48 @@ class calculate_UHI:
         
         # temporary code
         aaa=reference_data['datetime']
-        bbb=filtered_wund_data.filtered['datetime']
+        bbb=wund_data['datetime']
         ccc = utils.ismember(aaa, bbb)
         ccc2 = utils.ismember(bbb, aaa)
         tru = [reference_data['T'][i] for i in ccc2 if i is not None]
-        turn = [filtered_wund_data.filtered['TemperatureC'][i] for i in ccc if i is not None]
+        turn = [wund_data['TemperatureC'][i] for i in ccc if i is not None]
         dtime = [aaa[i].hour for i in ccc2 if i is not None]
         uniqueID, uniqueInd, uniqueCounts = unique(dtime, return_inverse=True,
                                                    return_counts=True)
-        
-        from pylab import hist, show
-        from numpy import sort
+    
+        dtime2 = [aaa[i] for i in ccc2 if i is not None]
+        valid = [idx for idx,c in enumerate(turn) if not isnan(c)]
+        turn, tru = nparray(turn)[valid], nparray(tru)[valid]
+        dtime2 = nparray(dtime2)[valid]
         UHI = nparray(turn) - nparray(tru)
-        self.UHI95 = nppercentile(UHI,95)
-        self.UHI_cycle = bincount(uniqueInd, weights = UHI) / uniqueCounts
+        self.corrcoef = npcor(turn, tru)[0][1]
+        print "correlation coefficient: " + str(npcor(turn,tru)[0][1])
+        startdate = datetime(dtime2[0].year, dtime2[0].month, dtime2[0].day, 0, 0)
+        enddate = datetime(dtime2[-1].year, dtime2[-1].month, dtime2[-1].day, 0, 0)        
+        for td in range(0, (enddate - startdate).days):
+            # increase the date by 1 day for the next download
+            start_window = startdate + timedelta(days=td, hours=22)
+            end_window = start_window + timedelta(hours=7)
+            # average UHI over time interval
+            within = [idx for idx, date in enumerate(dtime2) if
+                      start_window < date < end_window]
+            if len(within)>5:  # require at least 5 UHI times per time interval
+                UHI_av = [nmean(UHI[within])]
+                if not isnan(UHI_av[0]):
+                    try:
+                        self.UHI_av = concatenate((self.UHI_av, UHI_av))
+                    except AttributeError:
+                        self.UHI_av = UHI_av
         
+        # calculate UHI for each night
+        self.UHI95 = nppercentile(self.UHI_av,95)
+        #from pylab import *
+        #plot(range(0,len(turn)),turn)
+        #plot(range(0,len(tru)), tru)
+        #show()
+        #import pdb; pdb.set_trace()
+        #self.UHI_cycle = bincount(uniqueInd, weights = UHI) / uniqueCounts
+        #scatter(uniqueID, self.UHI_cycle)
         #UHI(sort(nparray(turn)-nparray(tru))[75:],100)
         #show()
 
@@ -245,7 +281,6 @@ def find_zipcode_map(lon_in, lat_in):
     src_srs=osr.SpatialReference()
     src_srs.ImportFromEPSG(4326)
     # transformed lon_in and lat_in coordinates
-    # TODO: check if [lon_in, lat_in] is correct order!
     lon_in_t, lat_in_t = utils.ReprojectCoords(
         [lon_in, lat_in], src_srs, tgt_srs)
     # open geotif
@@ -288,19 +323,22 @@ def find_zipcode_map(lon_in, lat_in):
     # return 
     return [ufrac, greenfrac, inwfrac]
 
-if __name__ == "__main__":
-    stationids = ['IGELDERL63', 'ILIMBURG29', 'IGELDERL5']
-    # define logger
-    logname = os.path.basename(__file__) + '.log'
-#    logger = utils.start_logging(filename=logname, level=opts.log)
-    logger = utils.start_logging(filename=logname, level='info')
+def main(opts):
     # load csv file KNMI reference stations
-    reference_stations = load_csv_data('knmi_reference_data.csv')
+    reference_stations = load_csv_data(opts.knmifile)
     # station_ids were converted to floats when reading csvdata, convert to int
     reference_stations['station_id'] = [int(c) for c in
                                         reference_stations['station_id']]
     # load csv file wunderground stations
-    wunderground_stations = load_csv_data('wunderground_stations.csv')
+    wunderground_stations = load_csv_data(opts.wundfile)
+    # try a few stations... remove this line later
+    stationids = ['IGELDERL29', 'IGELDERL37', 'IGELDERL53', 'IGELDERL54',
+                  'IDRENTHE29', 'IDRENTHE19', 'IDELFT1', 'IFRIESLA16',
+                  'IFRIESLA22']
+    stationids = ['IDRENTHE44', 'IGELDERL63','INBBREDA2',
+                  'INOORDHO63', 'IZUID-HO15', 'IFRIESLA47', 'IGELDERL5',
+                  'ILIMBURG29', 'INOORDBR18', 'IUTRECHT32']
+
     for stationid in stationids:
         # find index of wunderground station
         index_wunderground = wunderground_stations['Station ID'].index(stationid)
@@ -313,15 +351,55 @@ if __name__ == "__main__":
                 0,len(reference_stations['longitude']))]
         # find index of closest reference station to wunderground station
         min_index, min_value = min(enumerate(distance), key=operator.itemgetter(1))
-        # generate filename of closest reference station
-        filename = 'KNMI/uurgeg_' + str(reference_stations[
-            'station_id'][min_index]) + '_2011-2020.zip'
-        reference_data = load_reference_data(filename)
-        filtered_wund_data = time_filter_ncfile(stationid + '.nc', 60, 6, 'average')
+        
+        stime = time()     
+        # add check for filesize 0
+        filenameKNMI = 'pickled/KNMI_uurgeg_' + str(reference_stations[
+            'station_id'][min_index]) + '.pckl'        
+        if not os.path.isfile(filenameKNMI):
+            # save filtered as a pickled object
+            if not os.path.isdir('pickled'):
+                os.mkdir('pickled')  # create pickled dir if it does not exist yet
+            # generate filename of closest reference station
+            filename = 'KNMI/uurgeg_' + str(reference_stations[
+                'station_id'][min_index]) + '_2001-2010.zip'
+            filename2 = 'KNMI/uurgeg_' + str(reference_stations[
+                'station_id'][min_index]) + '_2011-2020.zip'        
+            dict1 = load_reference_data(filename).csvdata
+            dict2 = load_reference_data(filename2).csvdata
+            # combine dicts
+            reference_data = dict((k, concatenate((dict1.get(k), dict2.get(k))))
+                                for k in set(dict1.keys() + dict2.keys()))
+            f = open(filenameKNMI, 'w')
+            pickle.dump(reference_data, f, -1)
+            f.close()                        
+        else:
+            f = open(filenameKNMI)
+            reference_data = pickle.load(f)
+            f.close()
+        print time() - stime
+        # TODO: use a directory with arguments supplied to the function
+        if not os.path.isfile('pickled/' + stationid + '.pckl'): # add check for filesize 0
+            filtered_wund_data = time_filter_ncfile(stationid + '.nc', 60, 10, 'average', 'JJA', 'night')
+            # save filtered as a pickled object
+            if not os.path.isdir('pickled'):
+                os.mkdir('pickled')  # create pickled dir if it does not exist yet
+            filename = 'pickled/' + stationid +'.pckl'
+            f = open(filename, 'w')
+            pickle.dump(filtered_wund_data, f, -1)
+            f.close()            
+        else:
+            f = open('pickled/' + stationid + '.pckl')
+            filtered_wund_data = pickle.load(f)
+            f.close()
+        UHI = calculate_UHI(reference_data,
+                      filtered_wund_data.filtered)
+        if UHI.corrcoef < 0.7:
+            # TODO: create a list with known problem stations
+            continue  # someting must be wrong, skip the station
         UHI_station = [wunderground_stations['lat'][index_wunderground],
             wunderground_stations['lon'][index_wunderground],
-            calculate_UHI(reference_data.csvdata,
-                            filtered_wund_data.filtered).UHI95]
+            UHI.UHI95, len(UHI.UHI_av)]
         zipcode = find_zipcode_map(
             wunderground_stations['lon'][index_wunderground],
             wunderground_stations['lat'][index_wunderground])
@@ -331,5 +409,28 @@ if __name__ == "__main__":
             UHIzip = vstack((UHIzip, UHIzip_station))
         except NameError:
             UHIzip = UHIzip_station
-        import pdb; pdb.set_trace()
     import pdb; pdb.set_trace()
+
+def merge_two_dicts(x, y):
+    '''Given two dicts, merge them into a new dict as a shallow copy.'''
+    z = x.copy()
+    z.update(y)
+    return z
+
+if __name__ == "__main__":
+    # define logger
+    logname = os.path.basename(__file__) + '.log'
+#    logger = utils.start_logging(filename=logname, level=opts.log)
+    logger = utils.start_logging(filename=logname, level='info')
+    # define argument menu
+    description = 'Time filter Wunderground netCDF data'
+    parser = argparse.ArgumentParser(description=description)
+    # fill argument groups
+    parser.add_argument('-w', '--wundfile', help='Wunderground csv file',
+                        default='wunderground_stations.csv', required=False)
+    parser.add_argument('-k', '--knmifile', help='KNMI csv file',
+                        default='knmi_reference_data.csv', required=False)
+    # extract user entered arguments
+    opts = parser.parse_args()
+    # main function
+    main(opts)
