@@ -41,6 +41,7 @@ import argparse
 import cPickle as pickle
 from numpy import corrcoef as npcor
 from time import time
+import glob
 
 class load_reference_data:
     def __init__(self, filename):
@@ -127,7 +128,7 @@ class load_reference_data:
 
 class calculate_UHI:
     '''
-    class description
+    calculate UHI and UHI 95th percentile for a Wunderground station
     '''
     def __init__(self, reference_data, wund_data):
         self.reference_data = reference_data
@@ -137,7 +138,7 @@ class calculate_UHI:
                                      reference_data['DD'])
         # find all Nones in self.wund_data['TemperatureC'] list
         idx_nones = [i for i,j in enumerate(self.wund_data['TemperatureC']) if
-                     j is None]
+                     j is None or j<0 or j>35]
         # remove idx_nones for all keys in dictionary
         for key in self.wund_data.keys():
             self.wund_data[key] = npdelete(nparray(self.wund_data[key]),
@@ -168,6 +169,10 @@ class calculate_UHI:
         turn, tru = nparray(turn)[valid], nparray(tru)[valid]
         dtime2 = nparray(dtime2)[valid]
         UHI = nparray(turn) - nparray(tru)
+        #from pylab import scatter, show, plot
+        #plot(range(0,len(turn)), turn, 'b')
+        #plot(range(0,len(tru)), tru, 'r')
+        #show()
         self.corrcoef = npcor(turn, tru)[0][1]
         print "correlation coefficient: " + str(npcor(turn,tru)[0][1])
         startdate = datetime(dtime2[0].year, dtime2[0].month, dtime2[0].day, 0, 0)
@@ -175,29 +180,25 @@ class calculate_UHI:
         for td in range(0, (enddate - startdate).days):
             # increase the date by 1 day for the next download
             start_window = startdate + timedelta(days=td, hours=22)
-            end_window = start_window + timedelta(hours=7)
-            # average UHI over time interval
-            within = [idx for idx, date in enumerate(dtime2) if
-                      start_window < date < end_window]
-            if len(within)>5:  # require at least 5 UHI times per time interval
-                UHI_av = [nmean(UHI[within])]
-                if not isnan(UHI_av[0]):
-                    try:
-                        self.UHI_av = concatenate((self.UHI_av, UHI_av))
-                    except AttributeError:
-                        self.UHI_av = UHI_av
+            if start_window.month in [6, 7, 8]:
+                end_window = start_window + timedelta(hours=7)
+                # average UHI over time interval
+                within = [idx for idx, date in enumerate(dtime2) if
+                        start_window < date < end_window]
+                if len(within)>5:  # require at least 5 UHI times per time interval
+                    UHI_av = [nmean(UHI[within])]
+                    if not isnan(UHI_av[0]):
+                        try:
+                            self.UHI_av = concatenate((self.UHI_av, UHI_av))
+                        except AttributeError:
+                            self.UHI_av = UHI_av
         
         # calculate UHI for each night
-        self.UHI95 = nppercentile(self.UHI_av,95)
-        #from pylab import *
-        #plot(range(0,len(turn)),turn)
-        #plot(range(0,len(tru)), tru)
-        #show()
-        #import pdb; pdb.set_trace()
-        #self.UHI_cycle = bincount(uniqueInd, weights = UHI) / uniqueCounts
-        #scatter(uniqueID, self.UHI_cycle)
-        #UHI(sort(nparray(turn)-nparray(tru))[75:],100)
-        #show()
+        try:
+            self.UHI95 = nppercentile(self.UHI_av,95)
+        except AttributeError:
+            pass
+
 
 class find_reference_location:
     '''
@@ -266,12 +267,11 @@ def load_csv_data(csvfile):
                     k = k.strip()
                     csvdata[k].append(fitem(v))
     return csvdata
-#    self.csvdata['station_id'] = [int(c) for c in
-#                                  self.csvdata['station_id']]
+
 
 def find_zipcode_map(lon_in, lat_in):
     '''
-    description
+    return closest [ufrac, greenfrac, inwfrac] for input lon/lat
     '''
     ## convert lon_in, lat_in to EPSG:28992 spatial reference system
     # target spatial reference system
@@ -290,17 +290,16 @@ def find_zipcode_map(lon_in, lat_in):
     cols = dataset.RasterXSize
     rows = dataset.RasterYSize
     lon = gt[0] + gt[1]*nparange(0,cols)
-    lat = gt[3] + gt[5]*nparange(0,rows)    
-    #ncfile = ncdf('zipcode/conv_ufrac.tif.nc', 'r', formate='NETCDF4')
-    #lon = ncfile.variables['lon'][:]
-    #lat = ncfile.variables['lat'][:]
-    lon_window = lon[(lon>lon_in_t - 250) & (lon<lon_in_t + 250)]
-    lat_window = lat[(lat>lat_in_t - 250) & (lat<lat_in_t + 250)]
+    lat = gt[3] + gt[5]*nparange(0,rows)
+    # extract window surrounding point
+    lon_window = lon[(lon>lon_in_t - 125) & (lon<lon_in_t + 125)]
+    lat_window = lat[(lat>lat_in_t - 125) & (lat<lat_in_t + 125)]
+    # create meshgrid
     lonx, latx = npmeshgrid(lon_window,lat_window)
+    # reshape to one dimensional arrays
     lonx = lonx.reshape(-1)
     latx = latx.reshape(-1)
-    #distance = [utils.haversine(lon_in, lat_in, lonx[idx], latx[idx]) for idx
-    #            in range(0,len(lonx))]
+    # calculate distance to each point in the surrounding window
     distance = [sqrt((lon_in-lonx[idx])**2 + (lat_in-latx[idx])**2) for idx
                 in range(0,len(lonx))]
     # find index of closest reference station to wunderground station
@@ -331,17 +330,27 @@ def main(opts):
                                         reference_stations['station_id']]
     # load csv file wunderground stations
     wunderground_stations = load_csv_data(opts.wundfile)
-    # try a few stations... remove this line later
-    stationids = ['IGELDERL29', 'IGELDERL37', 'IGELDERL53', 'IGELDERL54',
-                  'IDRENTHE29', 'IDRENTHE19', 'IDELFT1', 'IFRIESLA16',
-                  'IFRIESLA22']
-    stationids = ['IDRENTHE44', 'IGELDERL63','INBBREDA2',
-                  'INOORDHO63', 'IZUID-HO15', 'IFRIESLA47', 'IGELDERL5',
-                  'ILIMBURG29', 'INOORDBR18', 'IUTRECHT32']
-
+    stationfiles = glob.glob('ncfiles/*')  # get a list of all station files
+    # list of stations with data issues that cause an exception
+    issuelist = ['IDAVISVA3', 'IDRENTHE13', 'IDRENTH15', 'IGELDERL145',
+                 'IFRIESLA43', 'IGRONING120', 'IGRONING103', 'INOORDBR139',
+                 'IDRENTHE50', 'INOORDBR138', 'INOORDBR129', 'IGELDERL153',
+                 'INOORDBR140', 'IZUIDHOL181', 'ILIMBURG72', 'IFRIESLA51',
+                 'IZUIDHOL107', 'IGELDERL142', 'IUTRECHT23', 'IUTRECHT125',
+                 'IUTRECHT96', 'IUTRECHT24']
+    # IFRIESLA43, IFRIESLA51 in degrees F
+    # INBROOSE2: lots of -600 values
+    stationids = [os.path.splitext(os.path.basename(c))[0] for c in stationfiles if os.path.splitext(os.path.basename(c))[0] not in issuelist]
+    i=0
+    # TODO: multiprocessing the for loop
     for stationid in stationids:
+        print stationid
         # find index of wunderground station
         index_wunderground = wunderground_stations['Station ID'].index(stationid)
+        # require specific station type
+        if not 'vantage' in wunderground_stations['Station Type'][index_wunderground].lower():
+            continue
+        #import pdb; pdb.set_trace()
         # calculate distance of wunderground station to all KNMI reference stations
         distance = [utils.haversine(
             wunderground_stations['lon'][index_wunderground],
@@ -352,18 +361,20 @@ def main(opts):
         # find index of closest reference station to wunderground station
         min_index, min_value = min(enumerate(distance),
                                    key=operator.itemgetter(1))
+        reference_station = str(reference_stations['station_id'][min_index])
         filenameKNMI = 'pickled/KNMI_uurgeg_' + str(reference_stations[
-            'station_id'][min_index]) + '.pckl'        
-        reference_data = calculate_load_knmi_data(filenameKNMI)
+            'station_id'][min_index]) + '.pckl'
+        reference_data = calculate_load_knmi_data(filenameKNMI,
+                                                  reference_station)
         filtered_wund_data = calculate_load_wund_data(stationid)
         UHI = calculate_UHI(reference_data,
                       filtered_wund_data.filtered)
-        if UHI.corrcoef < 0.7:
-            # TODO: create a list with known problem stations
+        
+        if UHI.corrcoef < 0.7 or not hasattr(UHI, 'UHI95'):
             continue  # someting must be wrong, skip the station
         UHI_station = [wunderground_stations['lat'][index_wunderground],
             wunderground_stations['lon'][index_wunderground],
-            UHI.UHI95, len(UHI.UHI_av)]
+            UHI.UHI95, nmean(UHI.UHI_av), len(UHI.UHI_av)]
         zipcode = find_zipcode_map(
             wunderground_stations['lon'][index_wunderground],
             wunderground_stations['lat'][index_wunderground])
@@ -373,52 +384,82 @@ def main(opts):
             UHIzip = vstack((UHIzip, UHIzip_station))
         except NameError:
             UHIzip = UHIzip_station
+        i += 1
+        print i
+        if i>200:
+            break
+    # require at least 200 days of data
+    UHIdata = nparray([UHIzip[idx,:] for idx,c in
+                       enumerate(UHIzip[:,4]) if c>270])
+    plot_scatter_spatial(UHIdata[:,1], UHIdata[:,0], UHIdata[:,2])
+    # fit statistical model
+    # UHI = a*ufrac + b*inw + c*greenfrac + d
+    import scipy.optimize as optimize
+    ydata = UHIdata[:,2]
+    xdata = UHIdata[:,5:]
+    # initial guess
+    x0 = nparray([0.0, 0.0, 0.0])
+    fit = optimize.leastsq(func, x0, args=(xdata, ydata))[0]
+    recons = fit[0]*xdata[:,0] + fit[1]*xdata[:,1] + fit[2]*xdata[:,2]
+    from pylab import *
+    xlim(0,5)
+    ylim(0,5)
+    scatter(recons, UHIdata[:,2])
+    plt.savefig('reconst.png', bbox_inches='tight')
+    show()
     import pdb; pdb.set_trace()
-
+    
 def calculate_load_wund_data(stationid):
     '''
-    description
+    Calculate or load Wunderground station data:
+        pickled file exists -> load
+        pickled file doesn't exist -> calculate
     '''
-    if not os.path.isfile('pickled/' + stationid + '.pckl'): # add check for filesize 0
-        filtered_wund_data = time_filter_ncfile(stationid + '.nc', 60, 10,
-                                                'average', 'JJA', 'night')
-        # save filtered as a pickled object
+    if not os.path.isfile('pickled/' + stationid + '.pckl'):
+        filtered_wund_data = time_filter_ncfile('ncfiles/' + stationid + '.nc',
+                                                60, 10, 'average', 'JJA',
+                                                'night')
         if not os.path.isdir('pickled'):
             # create pickled dir if it does not exist yet
             os.mkdir('pickled')
-            filename = 'pickled/' + stationid +'.pckl'
+        # save filtered as a pickled object            
+        filename = 'pickled/' + stationid +'.pckl'
         f = open(filename, 'w')
         pickle.dump(filtered_wund_data, f, -1)
         f.close()            
     else:
+        # load data from pickled object
         f = open('pickled/' + stationid + '.pckl')
         filtered_wund_data = pickle.load(f)
         f.close()
     return filtered_wund_data
 
-def calculate_load_knmi_data(filenameKNMI):
+def calculate_load_knmi_data(filenameKNMI, reference_station):
     '''
-    description
+    Calculate or load KNMI reference data:
+        pickled file exists -> load
+        pickled file doesn't exist -> calculate
     '''
-    # add check for filesize 0        
+    # add check for filesize 0
     if not os.path.isfile(filenameKNMI):
         # save filtered as a pickled object
         if not os.path.isdir('pickled'):
             os.mkdir('pickled')  # create pickled dir if it does not exist yet
         # generate filename of closest reference station
-        filename = 'KNMI/uurgeg_' + str(reference_stations[
-            'station_id'][min_index]) + '_2001-2010.zip'
-        filename2 = 'KNMI/uurgeg_' + str(reference_stations[
-            'station_id'][min_index]) + '_2011-2020.zip'        
+        filename = 'KNMI/uurgeg_' + reference_station + '_2001-2010.zip'
+        filename2 = 'KNMI/uurgeg_' + reference_station + '_2011-2020.zip'
+        # load reference data from csv files in zipfiles
         dict1 = load_reference_data(filename).csvdata
         dict2 = load_reference_data(filename2).csvdata
         # combine dicts
         reference_data = dict((k, concatenate((dict1.get(k), dict2.get(k))))
                             for k in set(dict1.keys() + dict2.keys()))
+        # save reference data as a pickled object
         f = open(filenameKNMI, 'w')
         pickle.dump(reference_data, f, -1)
         f.close()                        
     else:
+        # load pickled object
         f = open(filenameKNMI)
         reference_data = pickle.load(f)
         f.close()
@@ -429,6 +470,41 @@ def merge_two_dicts(x, y):
     z = x.copy()
     z.update(y)
     return z
+
+def plot_scatter_spatial(lon, lat, var):
+    '''
+    description
+    '''
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.basemap import Basemap
+    cm = plt.cm.get_cmap('RdYlBu_r')
+    plt.clf()  # close all open plots (if any)
+    fig = plt.figure()  # create empty plot
+    fig.set_size_inches(18.5, 10.5)
+    # create discrete colorbar
+    m = Basemap(projection='merc', lat_0 = 52.5, lon_0 = 5.5, resolution = 'i',
+                area_thresh = 1000.0, llcrnrlon = 3, llcrnrlat = 50.8,
+                urcrnrlon = 7.2, urcrnrlat = 54)
+    # compute map projection coordinates for lat/lon grid.
+    x, y = m(lon,lat)
+    m.drawcoastlines()
+    m.drawcountries()
+    sc = m.scatter(x, y, c=var, s=100, marker='o', cmap=cm)
+    plt.colorbar(sc)
+    plt.savefig('test.png', bbox_inches='tight')
+    plt.show()
+
+def func(params, xdata, ydata):
+    '''
+    The function whose square is to be minimised.
+    params ... list of parameters tuned to minimise function.
+    Further arguments:
+    xdata ... design matrix for a linear model.
+    ydata ... observed data.
+    '''
+    from numpy import dot as npdot
+    return (ydata - npdot(xdata, params))
+
 
 if __name__ == "__main__":
     # define logger
