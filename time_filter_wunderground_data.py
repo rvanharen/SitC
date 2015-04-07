@@ -21,10 +21,12 @@ import os
 
 
 class time_filter_ncfile:
-    def __init__(self, filename, timedelta, timewindow, method):
+    def __init__(self, filename, timedelta, timewindow, method, season, timeofday):
         self.filename = filename
         self.timedelta = timedelta
         self.timewindow = timewindow
+        self.season = season
+        self.timeofday = timeofday
         self.var = ['TemperatureC', 'DewpointC', 'PressurehPa', 'Humidity',
                     'WindSpeedKMH', 'dailyrainMM']
         self.check_file()  # check if file exists and has nc extension
@@ -54,14 +56,23 @@ class time_filter_ncfile:
         self.ncfile = ncdf(self.filename, 'r', formate='NETCDF4')
         # load required variables in netCDF file
         time_axis = self.ncfile.variables['time']
-        self.variables = {} # create empty dictionary
-        for variable in self.var:
-            # fill dictionary
-            self.variables[variable] = self.ncfile.variables[variable][:]
         # convert time_axis to datetime object
         self.time_cal = netcdftime.num2date(time_axis[:],
                                             units=time_axis.units,
                                             calendar=time_axis.calendar)
+        # extract season and time of day
+        # TODO: don't hardcode this
+        idx_extract = ([y for y,c in enumerate(self.time_cal) if
+                          (c.month>=6 and c.month<=8 and (
+                              c.hour<=5 or c.hour>=22))])
+        self.time_cal = self.time_cal[idx_extract]
+        
+        self.variables = {} # create empty dictionary
+        for variable in self.var:
+            # fill dictionary
+            self.variables[variable] = self.ncfile.variables[
+                variable][idx_extract]
+
 
     def time_filter_ncfile(self):
         '''
@@ -228,8 +239,11 @@ class time_filter_ncfile:
             # increment time
             current_time += timedelta
             # update min_index
-            if len(index_down) > 0:
-                min_index = index_down[-1]
+            try:
+                if len(index_down) > 0:
+                    min_index = index_down[-1]
+            except UnboundLocalError:
+                pass
 
     def close_ncfile(self):
         '''
@@ -261,3 +275,12 @@ if __name__ == "__main__":
     # time filter data
     filtered = time_filter_ncfile(opts.inputfile, opts.timedelta,
                                   opts.timewindow, opts.method)
+    
+    # save filtered as a pickled object
+    if not os.path.isdir('pickled'):
+        os.mkdir('pickled')  # create pickled dir if it does not exist yet
+    filename = 'pickled/' + os.path.splitext(
+        os.path.basename(opts.inputfile))[0] + '.pckl'
+    f = open(filename, 'w')
+    pickle.dump(filtered, f)
+    f.close()
