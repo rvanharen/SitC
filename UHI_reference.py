@@ -133,57 +133,83 @@ class calculate_UHI:
     def __init__(self, reference_data, wund_data):
         self.reference_data = reference_data
         self.wund_data = wund_data
+        self.remove_idx_nones()
+        self.find_shared_datetime_temperature()
+        self.UHI = nparray(self.turn) - nparray(self.tru)
+        self.calculate_daily_UHI()
+        if hasattr(self, 'UHI95'):
+            self.UHI95 = nppercentile(self.UHI_av,95)
+        self.corrcoef = npcor(self.turn, self.tru)[0][1]
+        print "correlation coefficient: " + str(npcor(self.turn, self.tru)[0][1])
+
         # calculate wind components reference data
         #U, V = utils.wind_components(reference_data['FF'],
         #                             reference_data['DD'])
-        # find all Nones in self.wund_data['TemperatureC'] list
+
+        # calculate UHI by subtracting reference temperature from station
+        # measurement for each timestep
+        #from pylab import scatter, show, plot
+        #plot(range(0,len(turn)), turn, 'b')
+        #plot(range(0,len(tru)), tru, 'r')
+        #show()
+
+    def remove_idx_nones(self):
+        '''
+        find all Nones in self.wund_data['TemperatureC'] list
+        '''
         idx_nones = [i for i,j in enumerate(self.wund_data['TemperatureC']) if
                      j is None or j<0 or j>35]
         # remove idx_nones for all keys in dictionary
         for key in self.wund_data.keys():
             self.wund_data[key] = npdelete(nparray(self.wund_data[key]),
                                            idx_nones)
-        ref_datetime = reference_data['datetime']
-        wund_datetime = wund_data['datetime']
+
+    def find_shared_datetime_temperature(self):
+        '''
+        description
+        '''
+        # load datetime objects for reference data and Wunderground data
+        ref_datetime = self.reference_data['datetime']
+        wund_datetime = self.wund_data['datetime']
+        # find shared datetimes between two reference/Wunderground data
         shared_datetime_1 = utils.ismember(ref_datetime, wund_datetime)
         shared_datetime_2 = utils.ismember(wund_datetime, ref_datetime)
-        tru = [reference_data['T'][i] for i in shared_datetime_2 if i is not None]
-        turn = [wund_data['TemperatureC'][i] for i in shared_datetime_1 if i is not None]    
+        # extract temperature in both sets for shared datetimes
+        tru = [self.reference_data['T'][i] for i in shared_datetime_2
+               if i is not None]
+        turn = [self.wund_data['TemperatureC'][i] for i in shared_datetime_1
+                if i is not None]
+        # datetime object of shared datetimes
         dtime = [ref_datetime[i] for i in shared_datetime_2 if i is not None]
+        # remove measurements for datetimes where temperature is not defined
+        # in Wunderground data
         valid = [idx for idx,c in enumerate(turn) if not isnan(c)]
-        turn, tru = nparray(turn)[valid], nparray(tru)[valid]
-        dtime = nparray(dtime)[valid]
-        UHI = nparray(turn) - nparray(tru)
-        #from pylab import scatter, show, plot
-        #plot(range(0,len(turn)), turn, 'b')
-        #plot(range(0,len(tru)), tru, 'r')
-        #show()
-        self.corrcoef = npcor(turn, tru)[0][1]
-        print "correlation coefficient: " + str(npcor(turn,tru)[0][1])
-        startdate = datetime(dtime[0].year, dtime[0].month, dtime[0].day, 0, 0)
-        enddate = datetime(dtime[-1].year, dtime[-1].month, dtime[-1].day, 0, 0)        
+        self.turn, self.tru = nparray(turn)[valid], nparray(tru)[valid]
+        self.dtime = nparray(dtime)[valid]
+
+    def calculate_daily_UHI(self):
+        '''
+        description
+        '''
+        startdate = datetime(self.dtime[0].year, self.dtime[0].month, self.dtime[0].day, 0, 0)
+        enddate = datetime(self.dtime[-1].year, self.dtime[-1].month, self.dtime[-1].day, 0, 0)        
         for td in range(0, (enddate - startdate).days):
             # increase the date by 1 day for the next download
             start_window = startdate + timedelta(days=td, hours=22)
             if start_window.month in [6, 7, 8]:
                 end_window = start_window + timedelta(hours=7)
                 # average UHI over time interval
-                within = [idx for idx, date in enumerate(dtime) if
+                within = [idx for idx, date in enumerate(self.dtime) if
                         start_window <= date < end_window]
                 if len(within) >= 7:  # require at least 7 UHI times per time interval
-                    UHI_av = [nmean(UHI[within])]
+                    UHI_av = [nmean(self.UHI[within])]
                     if not isnan(UHI_av[0]):
                         try:
                             self.UHI_av = concatenate((self.UHI_av, UHI_av))
                         except AttributeError:
                             self.UHI_av = UHI_av
-        
-        # calculate UHI for each night
-        try:
-            self.UHI95 = nppercentile(self.UHI_av,95)
-        except AttributeError:
-            pass
-    
+
+
 def load_csv_data(csvfile):
     '''
     load data csvfile
