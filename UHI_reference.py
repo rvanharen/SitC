@@ -183,47 +183,6 @@ class calculate_UHI:
             self.UHI95 = nppercentile(self.UHI_av,95)
         except AttributeError:
             pass
-
-
-class find_reference_location:
-    '''
-    find the closest reference station for a given stationid
-    '''
-    def __init__(self, stationid):
-        self.csvfile = 'knmi_reference_data.csv'
-        self.load_reference_locations()
-    def load_reference_locations(self):
-        '''
-        load data csvfile
-        '''
-        logger.info('Load stationdata from csv file')
-        with open(self.csvfile, 'r') as csvin:
-            reader = csv.DictReader(csvin, delimiter=',')
-            try:
-                self.csvdata
-            except AttributeError:
-                reader.next()
-                try:
-                    self.csvdata = {k.strip(): [fitem(v)] for k, v in
-                                    reader.next().items()}
-                except StopIteration:
-                    pass
-            current_row = 0
-            for line in reader:
-                current_row += 1
-                if current_row == 1:  # header
-                    # skip the header
-                    continue
-                for k, v in line.items():
-                    if k is not None:  # skip over empty fields
-                        k = k.strip()
-                        self.csvdata[k].append(fitem(v))
-        self.csvdata['station_id'] = [int(c) for c in
-                                      self.csvdata['station_id']]
-    def calculate_distance_to_reference_locations(self):
-        pass
-    def closest_reference_location(self):
-        pass
     
 def load_csv_data(csvfile):
     '''
@@ -371,7 +330,7 @@ def main(opts):
             UHIzip = UHIzip_station
         i += 1
         print i
-        if i>30:
+        if i>2:
             break
     # require at least 200 days of data
     UHIdata = nparray([UHIzip[idx,:] for idx,c in
