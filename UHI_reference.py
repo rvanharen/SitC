@@ -134,8 +134,8 @@ class calculate_UHI:
         self.reference_data = reference_data
         self.wund_data = wund_data
         # calculate wind components reference data
-        U, V = utils.wind_components(reference_data['FF'],
-                                     reference_data['DD'])
+        #U, V = utils.wind_components(reference_data['FF'],
+        #                             reference_data['DD'])
         # find all Nones in self.wund_data['TemperatureC'] list
         idx_nones = [i for i,j in enumerate(self.wund_data['TemperatureC']) if
                      j is None or j<0 or j>35]
@@ -143,31 +143,16 @@ class calculate_UHI:
         for key in self.wund_data.keys():
             self.wund_data[key] = npdelete(nparray(self.wund_data[key]),
                                            idx_nones)
-        # get time of day (hour) for each datetime object
-        hoursx = [item.hour for item in self.wund_data['datetime']]
-        # find all unique hours and its indices
-        uniqueID, uniqueInd, uniqueCounts = unique(hoursx, return_inverse=True,
-                                                   return_counts=True)
-        temp = [float(item) for item in self.wund_data['TemperatureC']]  # ugly hack
-        # calculate average temperature for each hour of the day 
-        # starts at 00h
-        #mtemp = bincount(uniqueInd, weights = temp) / uniqueCounts
-        
-        # temporary code
-        aaa=reference_data['datetime']
-        bbb=wund_data['datetime']
-        ccc = utils.ismember(aaa, bbb)
-        ccc2 = utils.ismember(bbb, aaa)
-        tru = [reference_data['T'][i] for i in ccc2 if i is not None]
-        turn = [wund_data['TemperatureC'][i] for i in ccc if i is not None]
-        dtime = [aaa[i].hour for i in ccc2 if i is not None]
-        uniqueID, uniqueInd, uniqueCounts = unique(dtime, return_inverse=True,
-                                                   return_counts=True)
-    
-        dtime2 = [aaa[i] for i in ccc2 if i is not None]
+        ref_datetime = reference_data['datetime']
+        wund_datetime = wund_data['datetime']
+        shared_datetime_1 = utils.ismember(ref_datetime, wund_datetime)
+        shared_datetime_2 = utils.ismember(wund_datetime, ref_datetime)
+        tru = [reference_data['T'][i] for i in shared_datetime_2 if i is not None]
+        turn = [wund_data['TemperatureC'][i] for i in shared_datetime_1 if i is not None]    
+        dtime = [ref_datetime[i] for i in shared_datetime_2 if i is not None]
         valid = [idx for idx,c in enumerate(turn) if not isnan(c)]
         turn, tru = nparray(turn)[valid], nparray(tru)[valid]
-        dtime2 = nparray(dtime2)[valid]
+        dtime = nparray(dtime)[valid]
         UHI = nparray(turn) - nparray(tru)
         #from pylab import scatter, show, plot
         #plot(range(0,len(turn)), turn, 'b')
@@ -175,17 +160,17 @@ class calculate_UHI:
         #show()
         self.corrcoef = npcor(turn, tru)[0][1]
         print "correlation coefficient: " + str(npcor(turn,tru)[0][1])
-        startdate = datetime(dtime2[0].year, dtime2[0].month, dtime2[0].day, 0, 0)
-        enddate = datetime(dtime2[-1].year, dtime2[-1].month, dtime2[-1].day, 0, 0)        
+        startdate = datetime(dtime[0].year, dtime[0].month, dtime[0].day, 0, 0)
+        enddate = datetime(dtime[-1].year, dtime[-1].month, dtime[-1].day, 0, 0)        
         for td in range(0, (enddate - startdate).days):
             # increase the date by 1 day for the next download
             start_window = startdate + timedelta(days=td, hours=22)
             if start_window.month in [6, 7, 8]:
                 end_window = start_window + timedelta(hours=7)
                 # average UHI over time interval
-                within = [idx for idx, date in enumerate(dtime2) if
-                        start_window < date < end_window]
-                if len(within)>5:  # require at least 5 UHI times per time interval
+                within = [idx for idx, date in enumerate(dtime) if
+                        start_window <= date < end_window]
+                if len(within) >= 7:  # require at least 7 UHI times per time interval
                     UHI_av = [nmean(UHI[within])]
                     if not isnan(UHI_av[0]):
                         try:
@@ -292,16 +277,17 @@ def find_zipcode_map(lon_in, lat_in):
     lon = gt[0] + gt[1]*nparange(0,cols)
     lat = gt[3] + gt[5]*nparange(0,rows)
     # extract window surrounding point
-    lon_window = lon[(lon>lon_in_t - 125) & (lon<lon_in_t + 125)]
-    lat_window = lat[(lat>lat_in_t - 125) & (lat<lat_in_t + 125)]
+    lon_window = lon[(lon >= lon_in_t - 50) & (lon <= lon_in_t + 50)]
+    lat_window = lat[(lat >= lat_in_t - 50) & (lat <= lat_in_t + 50)]
     # create meshgrid
     lonx, latx = npmeshgrid(lon_window,lat_window)
     # reshape to one dimensional arrays
     lonx = lonx.reshape(-1)
     latx = latx.reshape(-1)
     # calculate distance to each point in the surrounding window
-    distance = [sqrt((lon_in-lonx[idx])**2 + (lat_in-latx[idx])**2) for idx
+    distance = [sqrt((lon_in_t-lonx[idx])**2 + (lat_in_t-latx[idx])**2) for idx
                 in range(0,len(lonx))]
+    #import pdb; pdb.set_trace()
     # find index of closest reference station to wunderground station
     min_index, min_value = min(enumerate(distance), key=operator.itemgetter(1))
     lon_sel, lat_sel = lonx[min_index], latx[min_index]
@@ -368,8 +354,7 @@ def main(opts):
                                                   reference_station)
         filtered_wund_data = calculate_load_wund_data(stationid)
         UHI = calculate_UHI(reference_data,
-                      filtered_wund_data.filtered)
-        
+                      filtered_wund_data.filtered)        
         if UHI.corrcoef < 0.7 or not hasattr(UHI, 'UHI95'):
             continue  # someting must be wrong, skip the station
         UHI_station = [wunderground_stations['lat'][index_wunderground],
@@ -386,7 +371,7 @@ def main(opts):
             UHIzip = UHIzip_station
         i += 1
         print i
-        if i>200:
+        if i>30:
             break
     # require at least 200 days of data
     UHIdata = nparray([UHIzip[idx,:] for idx,c in
