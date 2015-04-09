@@ -42,6 +42,7 @@ import cPickle as pickle
 from numpy import corrcoef as npcor
 from time import time
 import glob
+import random
 
 class load_reference_data:
     def __init__(self, filename):
@@ -76,8 +77,8 @@ class load_reference_data:
                     # strip data in row and convert to int
                     # empty fiels are filled with -999
                     try:
-                        data_row = [int(item.strip()) if item.strip() else -999 for
-                                item in row if item]
+                        data_row = [int(item.strip()) if item.strip()
+                                    else -999 for item in row if item]
                     except ValueError:
                         import pdb; pdb.set_trace()
                     # create array with output data
@@ -124,23 +125,35 @@ class load_reference_data:
         self.csvdata['api'] = zeros(len(self.csvdata['RH']))
         self.csvdata['api'][0] = c * self.csvdata['RH'][0]  # set first element
         for index, item in enumerate(self.csvdata['RH']):
-            self.csvdata['api'][index] = c * item + self.csvdata['api'][index-1]
+            self.csvdata['api'][index] = c * item + self.csvdata['api'][
+                index-1]
 
 class calculate_UHI:
     '''
     calculate UHI and UHI 95th percentile for a Wunderground station
     '''
-    def __init__(self, reference_data, wund_data):
+    def __init__(self, reference_data, wund_data, stationid, weights=None):
         self.reference_data = reference_data
         self.wund_data = wund_data
+        self.stationid = stationid
+        self.weights = weights
         self.remove_idx_nones()
-        self.find_shared_datetime_temperature()
-        self.UHI = nparray(self.turn) - nparray(self.tru)
+        if not self.weights:
+            self.results =[self.find_shared_datetime_temperature(
+                reference_data)]
+        else:
+            self.results = [self.find_shared_datetime_temperature(
+                reference_data[idx]) for idx in range(0,len(reference_data))]
+        tru = [(sum([(weights[idx]*self.results[idx]['tru'][
+            dtime]) for idx in range(0, len(
+                reference_data))])/sum(weights)) for dtime in range(
+                    0, len(self.results[0]['dtime']))]            
+        self.UHI = nparray(self.results[0]['turn']) - nparray(tru)
         self.calculate_daily_UHI()
-        if hasattr(self, 'UHI95'):
+        if hasattr(self, 'UHI_av'):
             self.UHI95 = nppercentile(self.UHI_av,95)
-        self.corrcoef = npcor(self.turn, self.tru)[0][1]
-        print "correlation coefficient: " + str(npcor(self.turn, self.tru)[0][1])
+        self.corrcoef = npcor(self.results[0]['turn'], tru)[0][1]
+        print "correlation coefficient: " + str(self.corrcoef)
 
         # calculate wind components reference data
         #U, V = utils.wind_components(reference_data['FF'],
@@ -148,9 +161,13 @@ class calculate_UHI:
 
         # calculate UHI by subtracting reference temperature from station
         # measurement for each timestep
-        #from pylab import scatter, show, plot
-        #plot(range(0,len(turn)), turn, 'b')
-        #plot(range(0,len(tru)), tru, 'r')
+        from pylab import scatter, show, plot, savefig, clf
+        if not os.path.isfile('figs/' + stationid + '.png'):
+            plot(range(0,len(self.results[0]['turn'])),
+                 self.results[0]['turn'], 'b')
+            plot(range(0,len(tru)), tru, 'r')
+            savefig('figs/' + stationid + '.png', bbox_inches='tight')
+            clf()
         #show()
 
     def remove_idx_nones(self):
@@ -164,18 +181,18 @@ class calculate_UHI:
             self.wund_data[key] = npdelete(nparray(self.wund_data[key]),
                                            idx_nones)
 
-    def find_shared_datetime_temperature(self):
+    def find_shared_datetime_temperature(self, ref_data):
         '''
-        description
+        find station temperature and reference temperature on shared datetimes
         '''
         # load datetime objects for reference data and Wunderground data
-        ref_datetime = self.reference_data['datetime']
+        ref_datetime = ref_data['datetime']
         wund_datetime = self.wund_data['datetime']
         # find shared datetimes between two reference/Wunderground data
         shared_datetime_1 = utils.ismember(ref_datetime, wund_datetime)
         shared_datetime_2 = utils.ismember(wund_datetime, ref_datetime)
         # extract temperature in both sets for shared datetimes
-        tru = [self.reference_data['T'][i] for i in shared_datetime_2
+        tru = [ref_data['T'][i] for i in shared_datetime_2
                if i is not None]
         turn = [self.wund_data['TemperatureC'][i] for i in shared_datetime_1
                 if i is not None]
@@ -184,24 +201,32 @@ class calculate_UHI:
         # remove measurements for datetimes where temperature is not defined
         # in Wunderground data
         valid = [idx for idx,c in enumerate(turn) if not isnan(c)]
-        self.turn, self.tru = nparray(turn)[valid], nparray(tru)[valid]
-        self.dtime = nparray(dtime)[valid]
+        turn, tru = nparray(turn)[valid], nparray(tru)[valid]
+        dtime = nparray(dtime)[valid]
+        results = dict(zip(['turn', 'tru', 'dtime'], [turn, tru, dtime]))
+        return results
 
     def calculate_daily_UHI(self):
         '''
-        description
+        calculate daily average UHI for hourly timesteps defined in TODO
         '''
-        startdate = datetime(self.dtime[0].year, self.dtime[0].month, self.dtime[0].day, 0, 0)
-        enddate = datetime(self.dtime[-1].year, self.dtime[-1].month, self.dtime[-1].day, 0, 0)        
+        startdate = datetime(self.results[0]['dtime'][0].year,
+                             self.results[0]['dtime'][0].month,
+                             self.results[0]['dtime'][0].day, 0, 0)
+        enddate = datetime(self.results[0]['dtime'][-1].year,
+                           self.results[0]['dtime'][-1].month,
+                           self.results[0]['dtime'][-1].day, 0, 0)        
         for td in range(0, (enddate - startdate).days):
             # increase the date by 1 day for the next download
             start_window = startdate + timedelta(days=td, hours=22)
             if start_window.month in [6, 7, 8]:
                 end_window = start_window + timedelta(hours=7)
                 # average UHI over time interval
-                within = [idx for idx, date in enumerate(self.dtime) if
-                        start_window <= date < end_window]
-                if len(within) >= 7:  # require at least 7 UHI times per time interval
+                within = [idx for idx, date in enumerate(
+                    self.results[0]['dtime']) if (start_window
+                                                  <= date < end_window)]
+                # require at least 7 UHI times per time interval
+                if len(within) >= 7:
                     UHI_av = [nmean(self.UHI[within])]
                     if not isnan(UHI_av[0]):
                         try:
@@ -308,19 +333,52 @@ def main(opts):
                  'IDRENTHE50', 'INOORDBR138', 'INOORDBR129', 'IGELDERL153',
                  'INOORDBR140', 'IZUIDHOL181', 'ILIMBURG72', 'IFRIESLA51',
                  'IZUIDHOL107', 'IGELDERL142', 'IUTRECHT23', 'IUTRECHT125',
-                 'IUTRECHT96', 'IUTRECHT24']
+                 'IUTRECHT96', 'IUTRECHT24', 'ISOUTHHO16', 'INOORDHO179',
+                 'INORTHHO20', 'IZEELAND55', 'IZEELAND25', 'IOVERIJS111',
+                 'IZEELAND4']
+    issue_measurements = ['I90578852', 'IDRENTHE28', 'IDRENTHE52',
+                          'IFRIESLAN2', 'IFLEVOLA25', 'IFRIESLA22',
+                          'IFRIESLA71', 'IGELDER29', 'IGELDER5',
+                          'IGELDER70', 'IGELDER75', 'IGRONING41',
+                          'IGRONING56', 'IHAARLEM1', 'ILIMBURG29',
+                          'ILIMBURG36', 'ILIMBURG47', 'INHOOSTZ1',
+                          'INOORDBR48', 'INOORDHO102', 'INOORDHO108',
+                          'INOORDHO070', 'INORTHH08', 'IOVERIJS50',
+                          'IUTRECHT56', 'IUTRECHT63', 'IZEELAND36',
+                          'IZHLEIDE2', 'IZHVLAAR1', 'IZUIDHOL104',
+                          'IZUIDHOL78']
+    from numpy import hstack
+    # combine issue lists
+    issuelist = hstack((issuelist, issue_measurements))
     # IFRIESLA43, IFRIESLA51 in degrees F
     # INBROOSE2: lots of -600 values
-    stationids = [os.path.splitext(os.path.basename(c))[0] for c in stationfiles if os.path.splitext(os.path.basename(c))[0] not in issuelist]
+    stationids = [os.path.splitext(os.path.basename(c))[0] for c in
+                  stationfiles if os.path.splitext(os.path.basename(c))[0]
+                  not in issuelist]
+    #stationids = ['IDRENTHE44', 'IGELDERL63', 'IUTRECHT32', 'IFRIESLA47', 'INBBREDA2',
+    #              'INOORDHO63', 'IZUID-HO15', 'IGELDERL5', 'INOORDBR18',
+    #              'ILIMBURG29']
+    random.shuffle(stationids)  # randomize the order of the list
     i=0
     # TODO: multiprocessing the for loop
+    
+    # load reference station data
+    reference_data = []
+    for reference_station in reference_stations['station_id']:
+        print str(reference_station)
+        filenameKNMI = 'pickled/KNMI_uurgeg_' + str(reference_station) + '.pckl'
+        reference_data.append(calculate_load_knmi_data(filenameKNMI,
+                                                       str(reference_station)))
     for stationid in stationids:
         print stationid
         # find index of wunderground station
-        index_wunderground = wunderground_stations['Station ID'].index(stationid)
+        index_wunderground = wunderground_stations['Station ID'].index(
+            stationid)
         # require specific station type
         if not 'vantage' in wunderground_stations['Station Type'][index_wunderground].lower():
-            continue
+            #continue
+            pass
+        
         #import pdb; pdb.set_trace()
         # calculate distance of wunderground station to all KNMI reference stations
         distance = [utils.haversine(
@@ -329,22 +387,28 @@ def main(opts):
             reference_stations['longitude'][idx],
             reference_stations['latitude'][idx]) for idx in range(
                 0,len(reference_stations['longitude']))]
+        
+        # inverse distance weighted interpolateion
+        # en.wikipedia.org/wiki/inverse_distance_weighting
+        weights = [1/(c**2) for c in distance]
         # find index of closest reference station to wunderground station
         min_index, min_value = min(enumerate(distance),
                                    key=operator.itemgetter(1))
-        reference_station = str(reference_stations['station_id'][min_index])
-        filenameKNMI = 'pickled/KNMI_uurgeg_' + str(reference_stations[
-            'station_id'][min_index]) + '.pckl'
-        reference_data = calculate_load_knmi_data(filenameKNMI,
-                                                  reference_station)
         filtered_wund_data = calculate_load_wund_data(stationid)
+        #UHI = calculate_UHI(reference_data[min_index],
+        #              filtered_wund_data.filtered, stationid)
         UHI = calculate_UHI(reference_data,
-                      filtered_wund_data.filtered)        
+                      filtered_wund_data.filtered, stationid, weights)
         if UHI.corrcoef < 0.7 or not hasattr(UHI, 'UHI95'):
             continue  # someting must be wrong, skip the station
         UHI_station = [wunderground_stations['lat'][index_wunderground],
             wunderground_stations['lon'][index_wunderground],
             UHI.UHI95, nmean(UHI.UHI_av), len(UHI.UHI_av)]
+        # create a list of station names
+        try:
+            stationlist = vstack((stationlist, stationid))
+        except UnboundLocalError:
+            stationlist = stationid
         zipcode = find_zipcode_map(
             wunderground_stations['lon'][index_wunderground],
             wunderground_stations['lat'][index_wunderground])
@@ -356,11 +420,13 @@ def main(opts):
             UHIzip = UHIzip_station
         i += 1
         print i
-        if i>2:
+        if i>80:
             break
     # require at least 200 days of data
     UHIdata = nparray([UHIzip[idx,:] for idx,c in
-                       enumerate(UHIzip[:,4]) if c>270])
+                       enumerate(UHIzip[:,4]) if c>360])
+    stationlist = [stationlist[idx,:] for idx,c in
+                       enumerate(UHIzip[:,4]) if c>360]
     plot_scatter_spatial(UHIdata[:,1], UHIdata[:,0], UHIdata[:,2])
     # fit statistical model
     # UHI = a*ufrac + b*inw + c*greenfrac + d
@@ -368,13 +434,17 @@ def main(opts):
     ydata = UHIdata[:,2]
     xdata = UHIdata[:,5:]
     # initial guess
-    x0 = nparray([0.0, 0.0, 0.0])
+    x0 = nparray([0.0, 0.0, 0.0, 0.0])
+    # add constant
+    from numpy import ones, hstack
+    xdata = hstack((xdata,ones((len(xdata[:,1]),1))))
     fit = optimize.leastsq(func, x0, args=(xdata, ydata))[0]
-    recons = fit[0]*xdata[:,0] + fit[1]*xdata[:,1] + fit[2]*xdata[:,2]
+    recons = fit[0]*xdata[:,0] + fit[1]*xdata[:,1] + fit[2]*xdata[:,2] + fit[3]*xdata[:,3]
     from pylab import *
     xlim(0,5)
     ylim(0,5)
     scatter(recons, UHIdata[:,2])
+    print npcor(recons, UHIdata[:,2])[0][1]
     plt.savefig('reconst.png', bbox_inches='tight')
     show()
     import pdb; pdb.set_trace()
