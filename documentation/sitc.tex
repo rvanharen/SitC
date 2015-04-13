@@ -1,10 +1,10 @@
 \documentclass{memoir}
 
 \addtolength{\textwidth}{1.3in}
-\addtolength{\textheight}{2in}
+\addtolength{\textheight}{1in}
 \addtolength{\oddsidemargin}{-0.65in}
 \addtolength{\evensidemargin}{-0.65in}
-\addtolength{\topmargin}{-1in}
+\addtolength{\topmargin}{-0.5in}
 
 \usepackage{fourier} % or what ever
 \usepackage[scaled=.92]{helvet}%. Sans serif - Helvetica
@@ -68,12 +68,12 @@
 \usepackage{float}
 
 \floatstyle{colorruled}
-\newfloat{program}{thp}{lop}
+\newfloat{program}{thp}{lop}[chapter]
 \floatname{program}{Program}
 
 
 \begin{document}
- \chapter{Download data from \textsl{Weather Underground}}
+ \chapter{Download data from \textsl{Weather Underground} and KNMI}
  \section{Extract Dutch stations}
  The script \textsl{wunderground\_dump\_stationid.py} parses the Weather Underground website to find all stations in the Netherlands. For each station found, the following variables are extracted: \textsl{station id}, \textsl{neighborhood}, \textsl{city}, \textsl{station type}, and \textsl{location} (latitude, longitude, height). The zipcode of the station location is extracted using the api of Google Maps. The extracted data is saved to a csv file.
  
@@ -94,12 +94,13 @@ optional arguments:
 \end{program}
 
 \section{Download Wunderground data}
-Downloading data from Weather Underground is performed using the script \textsl{wunderground\_getdata.py}. A station id can be supplied to the script, using the (-s, --stationid) switch, to download data for a single station. Alternatively, the csv file that results from the \textsl{wunderground\_dump\_stationid.py} script can be supplied to the script using the (-c, --csvfile) switch to download data for all stations in the csv file.
+Downloading data from Weather Underground is performed using the script \textsl{wunderground\_getdata.py}. A station id can be supplied to the script, using the (-s, -{}-stationid) switch, to download data for a single station. Alternatively, the csv file that results from the \textsl{wunderground\_dump\_stationid.py} script can be supplied to the script using the (-c, -{}-csvfile) switch to download data for all stations in the csv file.
 
 Other relevant arguments to the script are:
 \begin{itemize}
-\item (-b, --startyear) and (-e, --endyear): Defines the begin and end of the period that data is downloaded for.
-\item (-k, --keep): Use the argument switch to keep already downloaded data. If the argument switch is not used existing data is overwritten.
+\item (-b, -{}-startyear) and (-e, -{}-endyear): Defines the begin and end of the period that data is downloaded for.
+\item (-o, -{}-outputdir): Data output directory. Data files will be saved to \$\{outputdir\}/\$\{STATIONID\}
+\item (-k, -{}-keep): Use the argument switch to keep already downloaded data. If the argument switch is not used existing data is overwritten.
 \end{itemize}
 \begin{program}
 \begin{verbatim}
@@ -128,4 +129,65 @@ optional arguments:
 \caption{wunderground\_getdata.py}
 \end{program}
 
+After the data is downloaded, the directory \$\{outputdir\}/\$\{STATIONID\} contains a separate csv file for each day. In order to combine this data in a single netCDF file, the script \textsl{combine\_wunderground\_data.py} is used. The script takes two arguments:
+\begin{itemize}
+ \item (-i, -{}-inputdir): Input directory containing daily csv files that need to be combined
+ \item (-o, -{}-outputdir): Output directory of the resulting netCDF file
+\end{itemize}
+Multiple input directories can be processed at once using a simple shell command. For example, to process all subdirectories within the current working directory and save the resulting netCDF files to a subdirectory called ncfiles:
+\begin{verbatim}
+ for directory in *; do ./wunderground_getdata.py -i ${directory} -o ncfiles; done
+\end{verbatim}
+
+
+\begin{program}
+ \begin{verbatim}
+  usage: combine_wunderground_data.py [-h] -i INPUTDIR [-o OUTPUTDIR]
+
+Combine csv files weather underground in one output file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUTDIR, --inputdir INPUTDIR
+                        Data input directory containing txt files
+  -o OUTPUTDIR, --outputdir OUTPUTDIR
+                        Data output directory
+ \end{verbatim}
+\caption{combine\_wunderground\_data.py}
+\end{program}
+
+\section{KNMI reference data}
+KNMI station data is used as reference data for rural temperatures. The script \textsl{knmi\_getdata.py} downloads the reference data from the KNMI website. 
+\begin{itemize}
+ \item (-o, -{}-outputdir): Output directory where the data should be saved.
+ \item (-s, -{}-stationid): Station id of the KNMI reference station to download data from. If the argument is not used, the KNMI website is parsed to get all available stationids and data for all stations is downloaded.
+ \item (-c, -{}-csvfile): Name of output csv file that contains information about the KNMI stations and their location.
+ \item (-k, -{}-keep): Use the argument switch to keep already downloaded data. If the argument switch is not used existing data is overwritten.
+\end{itemize}
+
+\begin{program}
+ \begin{verbatim}
+  usage: knmi_getdata.py [-h] [-o OUTPUTDIR] [-s STATIONID] -c CSVFILE [-k]
+                       [-l {debug,info,warning,critical,error}]
+
+Get data KNMI reference stations
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o OUTPUTDIR, --outputdir OUTPUTDIR
+                        Data output directory
+  -s STATIONID, --stationid STATIONID
+                        Station id
+  -c CSVFILE, --csvfile CSVFILE
+                        CSV data file
+  -k, --keep            Keep downloaded files
+  -l {debug,info,warning,critical,error}, --log {debug,info,warning,critical,error}
+                        Log level
+ \end{verbatim}
+\caption{knmi\_getdata.py}
+\end{program}
+
+\chapter{Urban heat island}
+An urban heat island (UHI) is an metropolitan area that is warmer than its surrounding rural areas due to human activities. The temperature difference usually is larger at night than during the day, and is most apparent when the winds are weak.
+\section{Calculation of the UHI}
 \end{document}
