@@ -1,0 +1,131 @@
+\documentclass{memoir}
+
+\addtolength{\textwidth}{1.3in}
+\addtolength{\textheight}{2in}
+\addtolength{\oddsidemargin}{-0.65in}
+\addtolength{\evensidemargin}{-0.65in}
+\addtolength{\topmargin}{-1in}
+
+\usepackage{fourier} % or what ever
+\usepackage[scaled=.92]{helvet}%. Sans serif - Helvetica
+\usepackage{color,calc}
+\usepackage{verbatim}
+\newsavebox{\ChpNumBox}
+\definecolor{ChapBlue}{rgb}{0.00,0.65,0.65}
+\makeatletter
+\newcommand
+*
+{\thickhrulefill}{%
+\leavevmode\leaders\hrule height 1\p@ \hfill \kern \z@}
+\newcommand
+*
+\BuildChpNum[2]{%
+\begin{tabular}[t]{@{}c@{}}
+\makebox[0pt][c]{#1\strut}  \\[.5ex]
+\colorbox{cyan}{%
+\rule[-10em]{0pt}{0pt}%
+\rule{1ex}{0pt}\color{black}#2\strut
+\rule{1ex}{0pt}}%
+\end{tabular}}
+\makechapterstyle{BlueBox}{%
+\renewcommand{\chapnamefont}{\large\scshape}
+\renewcommand{\chapnumfont}{\Huge\bfseries}
+\renewcommand{\chaptitlefont}{\raggedright\Huge\bfseries}
+\setlength{\beforechapskip}{20pt}
+\setlength{\midchapskip}{26pt}
+\setlength{\afterchapskip}{40pt}
+\renewcommand{\printchaptername}{}
+\renewcommand{\chapternamenum}{}
+\renewcommand{\printchapternum}{%
+\sbox{\ChpNumBox}{%
+\BuildChpNum{\chapnamefont\@chapapp}%
+{\chapnumfont\thechapter}}}
+\renewcommand{\printchapternonum}{%
+\sbox{\ChpNumBox}{%
+\BuildChpNum{\chapnamefont\vphantom{\@chapapp}}%
+{\chapnumfont\hphantom{\thechapter}}}}
+\renewcommand{\afterchapternum}{}
+\renewcommand{\printchaptertitle}[1]{%
+\usebox{\ChpNumBox}\hfill
+\parbox[t]{\hsize-\wd\ChpNumBox-1em}{%
+\vspace{\midchapskip}%
+\color{cyan}\thickhrulefill\par
+\color{black}\chaptitlefont ##1\par}}%
+}
+\chapterstyle{BlueBox}
+
+\flushbottom \raggedbottom
+
+\makeatletter
+% this is a copy of the original \fs@ruled but with {\color{cyan} ... } added:
+\newcommand\fs@colorruled{\def\@fs@cfont{\bfseries}\let\@fs@capt\floatc@ruled
+  \def\@fs@pre{{\color{cyan}\hrule height1.25pt depth0pt }\kern2pt}%
+  \def\@fs@post{\kern2pt{\color{cyan}\hrule height 1.25pt}\relax}%
+  \def\@fs@mid{\kern2pt{\color{cyan}\hrule height 1.25pt}\kern2pt}%
+  \let\@fs@iftopcapt\iftrue}
+\makeatother
+
+\usepackage{float}
+
+\floatstyle{colorruled}
+\newfloat{program}{thp}{lop}
+\floatname{program}{Program}
+
+
+\begin{document}
+ \chapter{Download data from \textsl{Weather Underground}}
+ \section{Extract Dutch stations}
+ The script \textsl{wunderground\_dump\_stationid.py} parses the Weather Underground website to find all stations in the Netherlands. For each station found, the following variables are extracted: \textsl{station id}, \textsl{neighborhood}, \textsl{city}, \textsl{station type}, and \textsl{location} (latitude, longitude, height). The zipcode of the station location is extracted using the api of Google Maps. The extracted data is saved to a csv file.
+ 
+ The script takes one (optional) argument, which is the name of the output csv file. The default name of the output csv file is \textsl{wunderground\_stations.csv} in the current working directory.
+ \begin{program}
+\begin{verbatim}
+usage: wunderground_dump_stationid.py [-h] [-o OUTPUT]
+
+Extract all Wunderground stations in the Netherlands and write the station
+names and locations to a csv file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o OUTPUT, --output OUTPUT
+                        CSV output file [default: wunderground_stations.csv]
+\end{verbatim}
+\caption{wunderground\_dump\_stationid.py}
+\end{program}
+
+\section{Download Wunderground data}
+Downloading data from Weather Underground is performed using the script \textsl{wunderground\_getdata.py}. A station id can be supplied to the script, using the (-s, --stationid) switch, to download data for a single station. Alternatively, the csv file that results from the \textsl{wunderground\_dump\_stationid.py} script can be supplied to the script using the (-c, --csvfile) switch to download data for all stations in the csv file.
+
+Other relevant arguments to the script are:
+\begin{itemize}
+\item (-b, --startyear) and (-e, --endyear): Defines the begin and end of the period that data is downloaded for.
+\item (-k, --keep): Use the argument switch to keep already downloaded data. If the argument switch is not used existing data is overwritten.
+\end{itemize}
+\begin{program}
+\begin{verbatim}
+usage: wunderground_getdata.py [-h] [-o OUTPUTDIR] [-b STARTYEAR] [-e ENDYEAR]
+                               [-s STATIONID] [-c CSVFILE] [-k]
+                               [-l {debug,info,warning,critical,error}]
+
+Combine csv files weather underground in one output file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o OUTPUTDIR, --outputdir OUTPUTDIR
+                        Data output directory
+  -b STARTYEAR, --startyear STARTYEAR
+                        Start year
+  -e ENDYEAR, --endyear ENDYEAR
+                        End year
+  -s STATIONID, --stationid STATIONID
+                        Station id
+  -c CSVFILE, --csvfile CSVFILE
+                        CSV data file
+  -k, --keep            Keep downloaded files
+  -l {debug,info,warning,critical,error}, --log {debug,info,warning,critical,error}
+                        Log level
+\end{verbatim}
+\caption{wunderground\_getdata.py}
+\end{program}
+
+\end{document}
