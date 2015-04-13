@@ -20,6 +20,8 @@ import sys
 from multiprocessing import Pool, Manager, cpu_count
 import time
 from numpy import vstack
+import shutil
+import argparse
 
 def get_stationids(processes=cpu_count()):
     '''
@@ -76,8 +78,15 @@ def append_location_zipcode(args):
         q.put(row)
         return [c.encode('utf-8').strip() for c in row]
         
-def dump_stationids(data_out):
-    with open('wunderground_stations.csv', 'w') as fp:
+def dump_stationids(data_out, csvfile):
+    '''
+    write station data to output csv file
+    '''
+    # move file to ${csvfile}.backup if the csv file already exists
+    if os.path.isfile(csvfile):
+        shutil.move(csvfile, csvfile + '.backup')
+    # write data to csv file
+    with open(csvfile, 'w') as fp:
         a = csv.writer(fp, delimiter=',')
         a.writerows(data_out)
 
@@ -180,5 +189,18 @@ def progressbar2(_i, count, prefix="", size=60):
     sys.stdout.flush()
 
 if __name__ == "__main__":
+    # define argument menu
+    description = 'Extract all Wunderground stations in the Netherlands ' + \
+        'and write the station names and locations to a csv file'
+    parser = argparse.ArgumentParser(description=description)
+    # fill argument groups
+    parser.add_argument('-o', '--output', help='CSV output file',
+                        default='wunderground_stations.csv', required=False)
+    # extract user entered arguments
+    opts = parser.parse_args()
+    
+    # process data
+    process_raw_data(opts)
+
     stationdata = get_stationids(processes=8)
-    dump_stationids(stationdata)
+    dump_stationids(stationdata, opts.output)
