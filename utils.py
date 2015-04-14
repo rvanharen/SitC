@@ -123,22 +123,29 @@ def haversine(lon1, lat1, lon2, lat2):
 def ReprojectCoords(coords,src_srs,tgt_srs):
     ''' Reproject a list of x,y coordinates.
 
-        @type geom:     C{tuple/list}
-        @param geom:    List of [[x,y],...[x,y]] coordinates
+        @type geom:     C{list}
+        @param geom:    [x,y] coordinates
         @type src_srs:  C{osr.SpatialReference}
         @param src_srs: OSR SpatialReference object
         @type tgt_srs:  C{osr.SpatialReference}
         @param tgt_srs: OSR SpatialReference object
         @rtype:         C{tuple/list}
-        @return:        List of transformed [[x,y],...[x,y]] coordinates
+        @return:        List of transformed [x,y] coordinates
 
         tgt_srs and src_srs can be defined in a way similar to:
             tgt_srs=osr.SpatialReference()
-            tgt_srs.ImportFromEPSG(28992)
+            tgt_srs.ImportFromEPSG(28992)  # Amersfoort srs
             src_srs=osr.SpatialReference()
-            src_srs.ImportFromEPSG(4326)
+            src_srs.ImportFromEPSG(4326)  # lat/lon srs
     '''
-    trans_coords=[]
     transform = osr.CoordinateTransformation( src_srs, tgt_srs)
     x,y,z = transform.TransformPoint(coords[0],coords[1])
-    return x, y, z 
+    return x, y
+
+def merge_two_dicts(x, y):
+    '''
+    Given two dicts, merge them into a new dict as a shallow copy.
+    '''
+    z = x.copy()
+    z.update(y)
+    return z

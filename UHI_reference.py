@@ -224,7 +224,7 @@ class calculate_UHI:
         for td in range(0, (enddate - startdate).days):
             # increase the date by 1 day for the next download
             start_window = startdate + timedelta(days=td, hours=22)
-            if start_window.month in [6, 7, 8]:
+            if start_window.month in self.months:
                 end_window = start_window + timedelta(hours=7)
                 # average UHI over time interval
                 within = [idx for idx, date in enumerate(
@@ -525,14 +525,6 @@ def calculate_load_knmi_data(filenameKNMI, reference_station):
         reference_data = pickle.load(f)
         f.close()
     return reference_data
-    
-def merge_two_dicts(x, y):
-    '''
-    Given two dicts, merge them into a new dict as a shallow copy.
-    '''
-    z = x.copy()
-    z.update(y)
-    return z
 
 def plot_scatter_spatial(lon, lat, var, filename):
     '''
