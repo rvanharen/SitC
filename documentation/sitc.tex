@@ -10,6 +10,9 @@
 \usepackage[scaled=.92]{helvet}%. Sans serif - Helvetica
 \usepackage{color,calc}
 \usepackage{verbatim}
+\usepackage{graphicx}
+\usepackage{anyfontsize}
+
 \newsavebox{\ChpNumBox}
 \definecolor{ChapBlue}{rgb}{0.00,0.65,0.65}
 \makeatletter
@@ -73,6 +76,51 @@
 
 
 \begin{document}
+
+\begin{titlingpage}
+ \includegraphics[width=1\textwidth]{../../../../ESCIENCE_logo_B_nl_long_cyanblack.png} \\
+
+ \vspace{1cm}
+  \begin{tabular}{p{5cm} l}
+   {\small Date} & {\small Version} \\
+   {\Large \today} & {\Large 0.1}
+  \end{tabular}
+  
+  \vspace{0.5cm}
+  
+  \begin{tabular}{p{5cm}}
+   {\small Author}\\
+   {\Large Ronald van Haren}
+  \end{tabular}
+
+  \vspace{2cm}
+  
+  {\fontsize{30}{40} \selectfont Summer in the city}
+  
+  \vspace{0.5cm}
+  
+  \Huge UHI validation
+  
+\vfill
+\noindent
+\begin{minipage}[t]{0.4\textwidth}
+\begin{flushleft} {\Large
+Netherlands eScience Center \\
+\vspace{0.25cm}
+Science Park 140 \\
+1098 XG Amsterdam \\
+\vspace{0.25cm}
++31 (0)20 888 41 97 \\
+\vspace{0.25cm}
+info@eScienceCenter.com \\
+www.eScienceCenter.com} \\
+\vspace{0.5cm}
+{\huge{\color{cyan}by SURF \& NWO}}
+\end{flushleft}
+\end{minipage}
+\end{titlingpage}
+
+
  \chapter{Download data from \textsl{Weather Underground} and KNMI}
  \section{Extract Dutch stations}
  The script \textsl{wunderground\_dump\_stationid.py} parses the Weather Underground website to find all stations in the Netherlands. For each station found, the following variables are extracted: \textsl{station id}, \textsl{neighborhood}, \textsl{city}, \textsl{station type}, and \textsl{location} (latitude, longitude, height). The zipcode of the station location is extracted using the api of Google Maps. The extracted data is saved to a csv file.
@@ -189,5 +237,71 @@ optional arguments:
 
 \chapter{Urban heat island}
 An urban heat island (UHI) is an metropolitan area that is warmer than its surrounding rural areas due to human activities. The temperature difference usually is larger at night than during the day, and is most apparent when the winds are weak.
-\section{Calculation of the UHI}
+\section{Determining the UHI effect}
+\subsection{Time filtering Wunderground data}
+The data from Weather Underground is measured at random time steps. In order to compare it with hourly KNMI reference data, the data should be processed to create a dataset on the same temporal density. This is done by the functionality in the script \textsl{time\_filter\_wunderground\_data.py}. This script is just a helper script and does not need to be called directly, the filtering functionality is imported in the script \textsl{UHI\_reference.py}.
+
+The script supports two ways to time filter the Weather underground data to a fixed time step, namely:
+\begin{itemize}
+ \item \textbf{interpolate}: depending on the measurements available, the value at the time step is determined according to the following rules
+ \begin{itemize}
+ \item if a measurement coincides directly with the time step, the value at the time step is set equal to the measurement
+ \item if within the timewindow set measurements are available both before and after the time step, the value at the time step is set to the value obtained from interpolating the last measurement before the time step and the first measurement after the time step
+ \item if only measurements within the time window set are available before the time step, the value is set to the last measurement before the time step
+ \item if only measurements within the time window set are available after the time step, the value is set to the first measurement after the time step
+ \item if no measurements are available within the time window the value is set to None
+ \end{itemize}
+ \item \textbf{average}: all measurements within the selected time window are averaged
+\end{itemize}
+
+\subsection{UHI calculation script}
+Calculation of the UHI effect for all Wunderground stations is performed using the script \textsl{UHI\_reference.py}. The script has one required argument, the numbers of the months over which the UHI needs to be calculated (-m, -{}-months). Optional arguments are:
+\begin{itemize}
+\item (-w, -{}-wundfile): Csv file with station from Weather Underground. Output from the script \textsl{wunderground\_dump\_stationid.py}. If the argument is not specified, the default filename \textsl{wunderground\_stations.csv} is used.
+\item (-k, -{}-knmifile): Csv file with KNMI reference stations. Output from the script \textsl{knmi\_getdata.py}. If the argument is not specified, the default filename \textsl{knmi\_reference\_data.csv} is used.
+\item (-i, -{}-interpolate): Specify if time filtering of Weather Underground data should use interpolation instead of time averaging.
+\item (-s, -{}-stationtype): Specify if only station that use an instrument that contains the (converted to lowercase) string specified.
+\end{itemize}
+\begin{program}
+ \begin{verbatim}
+usage: UHI_reference.py [-h] [-w WUNDFILE] [-k KNMIFILE] [-i] [-s STATIONTYPE]                                                                                                                                                               
+                        -m MONTHS [MONTHS ...]                                                                                                                                                                                               
+                                                                                                                                                                                                                                             
+Time filter Wunderground netCDF data                                                                                                                                                                                                         
+                                                                                                                                                                                                                                             
+optional arguments:                                                                                                                                                                                                                          
+  -h, --help            show this help message and exit                                                                                                                                                                                      
+  -w WUNDFILE, --wundfile WUNDFILE                                                                                                                                                                                                           
+                        Wunderground csv file [default:                                                                                                                                                                                      
+                        wunderground_stations.csv]                                                                                                                                                                                           
+  -k KNMIFILE, --knmifile KNMIFILE                                                                                                                                                                                                           
+                        KNMI csv file [default: knmi_reference_data.csv]                                                                                                                                                                     
+  -i, --interpolate     Distance weighted interpolation of KNMI reference data                                                                                                                                                               
+                        instead of nearest reference station                                                                                                                                                                                 
+  -s STATIONTYPE, --stationtype STATIONTYPE                                                                                                                                                                                                  
+                        Require a certain instrument for the Wunderground                                                                                                                                                                    
+                        station                                                                                                                                                                                                              
+  -m MONTHS [MONTHS ...], --months MONTHS [MONTHS ...]                                                                                                                                                                                       
+                        month numbers (1-12) separated by space used to                                                                                                                                                                      
+                        calculate UHI
+ \end{verbatim}
+ \caption{UHI\_reference.py}
+\end{program}
+\section{Methods}
+describe methods
+
+\chapter{Results}
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=0.8\textwidth]{../figures/test.png}
+\label{fig:uhi}
+ \caption{UHI}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=0.8\textwidth]{../figures/reconst.png}
+\label{fig:uhi}
+ \caption{Reconstruction}
+\end{figure}
 \end{document}
