@@ -43,6 +43,7 @@ from numpy import corrcoef as npcor
 from time import time
 import glob
 import random
+from pylab import scatter, show, plot, savefig, clf, title, xlim,  ylim
 
 class load_reference_data:
     def __init__(self, filename):
@@ -132,10 +133,12 @@ class calculate_UHI:
     '''
     calculate UHI and UHI 95th percentile for a Wunderground station
     '''
-    def __init__(self, reference_data, wund_data, stationid, weights=None):
+    def __init__(self, reference_data, wund_data, stationid, months,
+                 weights=None):
         self.reference_data = reference_data
         self.wund_data = wund_data
         self.stationid = stationid
+        self.months = months
         self.weights = weights
         self.remove_idx_nones()
         if not self.weights:
@@ -154,14 +157,12 @@ class calculate_UHI:
             self.UHI95 = nppercentile(self.UHI_av,95)
         self.corrcoef = npcor(self.results[0]['turn'], tru)[0][1]
         print "correlation coefficient: " + str(self.corrcoef)
-
         # calculate wind components reference data
         #U, V = utils.wind_components(reference_data['FF'],
         #                             reference_data['DD'])
 
         # calculate UHI by subtracting reference temperature from station
         # measurement for each timestep
-        from pylab import scatter, show, plot, savefig, clf
         if not os.path.isfile('figs/' + stationid + '.png'):
             plot(range(0,len(self.results[0]['turn'])),
                  self.results[0]['turn'], 'b')
@@ -203,6 +204,7 @@ class calculate_UHI:
         valid = [idx for idx,c in enumerate(turn) if not isnan(c)]
         turn, tru = nparray(turn)[valid], nparray(tru)[valid]
         dtime = nparray(dtime)[valid]
+        # create a dictionary containing the results and return the results
         results = dict(zip(['turn', 'tru', 'dtime'], [turn, tru, dtime]))
         return results
 
@@ -210,12 +212,15 @@ class calculate_UHI:
         '''
         calculate daily average UHI for hourly timesteps defined in TODO
         '''
+        # set startdate as the first available date
         startdate = datetime(self.results[0]['dtime'][0].year,
                              self.results[0]['dtime'][0].month,
                              self.results[0]['dtime'][0].day, 0, 0)
+        # set enddate as the last available date
         enddate = datetime(self.results[0]['dtime'][-1].year,
                            self.results[0]['dtime'][-1].month,
                            self.results[0]['dtime'][-1].day, 0, 0)        
+        # loop through all days in between
         for td in range(0, (enddate - startdate).days):
             # increase the date by 1 day for the next download
             start_window = startdate + timedelta(days=td, hours=22)
@@ -233,7 +238,6 @@ class calculate_UHI:
                             self.UHI_av = concatenate((self.UHI_av, UHI_av))
                         except AttributeError:
                             self.UHI_av = UHI_av
-
 
 def load_csv_data(csvfile):
     '''
@@ -262,7 +266,6 @@ def load_csv_data(csvfile):
                     k = k.strip()
                     csvdata[k].append(fitem(v))
     return csvdata
-
 
 def find_zipcode_map(lon_in, lat_in):
     '''
@@ -297,7 +300,6 @@ def find_zipcode_map(lon_in, lat_in):
     # calculate distance to each point in the surrounding window
     distance = [sqrt((lon_in_t-lonx[idx])**2 + (lat_in_t-latx[idx])**2) for idx
                 in range(0,len(lonx))]
-    #import pdb; pdb.set_trace()
     # find index of closest reference station to wunderground station
     min_index, min_value = min(enumerate(distance), key=operator.itemgetter(1))
     lon_sel, lat_sel = lonx[min_index], latx[min_index]
@@ -318,14 +320,12 @@ def find_zipcode_map(lon_in, lat_in):
     # return 
     return [ufrac, greenfrac, inwfrac]
 
-def main(opts):
-    # load csv file KNMI reference stations
-    reference_stations = load_csv_data(opts.knmifile)
-    # station_ids were converted to floats when reading csvdata, convert to int
-    reference_stations['station_id'] = [int(c) for c in
-                                        reference_stations['station_id']]
-    # load csv file wunderground stations
-    wunderground_stations = load_csv_data(opts.wundfile)
+def create_list_of_stations():
+    '''
+    Return a randomly ordered list of stationids from the netCDF files in the
+    subdirectory ncfiles. Remove stationids that have measurement issues.
+    '''
+    from numpy import hstack
     stationfiles = glob.glob('ncfiles/*')  # get a list of all station files
     # list of stations with data issues that cause an exception
     issuelist = ['IDAVISVA3', 'IDRENTHE13', 'IDRENTH15', 'IGELDERL145',
@@ -347,21 +347,24 @@ def main(opts):
                           'IUTRECHT56', 'IUTRECHT63', 'IZEELAND36',
                           'IZHLEIDE2', 'IZHVLAAR1', 'IZUIDHOL104',
                           'IZUIDHOL78']
-    from numpy import hstack
     # combine issue lists
     issuelist = hstack((issuelist, issue_measurements))
-    # IFRIESLA43, IFRIESLA51 in degrees F
-    # INBROOSE2: lots of -600 values
+    # create stationids from stationfiles for stationids not in issuelist
     stationids = [os.path.splitext(os.path.basename(c))[0] for c in
                   stationfiles if os.path.splitext(os.path.basename(c))[0]
                   not in issuelist]
-    #stationids = ['IDRENTHE44', 'IGELDERL63', 'IUTRECHT32', 'IFRIESLA47', 'INBBREDA2',
-    #              'INOORDHO63', 'IZUID-HO15', 'IGELDERL5', 'INOORDBR18',
-    #              'ILIMBURG29']
     random.shuffle(stationids)  # randomize the order of the list
-    i=0
-    # TODO: multiprocessing the for loop
-    
+    return stationids
+
+def main(opts):
+    # load csv file KNMI reference stations
+    reference_stations = load_csv_data(opts.knmifile)
+    # station_ids were converted to floats when reading csvdata, convert to int
+    reference_stations['station_id'] = [int(c) for c in
+                                        reference_stations['station_id']]
+    # load csv file wunderground stations
+    wunderground_stations = load_csv_data(opts.wundfile)
+    stationids = create_list_of_stations()
     # load reference station data
     reference_data = []
     for reference_station in reference_stations['station_id']:
@@ -369,17 +372,17 @@ def main(opts):
         filenameKNMI = 'pickled/KNMI_uurgeg_' + str(reference_station) + '.pckl'
         reference_data.append(calculate_load_knmi_data(filenameKNMI,
                                                        str(reference_station)))
+    i=0       
     for stationid in stationids:
-        print stationid
         # find index of wunderground station
         index_wunderground = wunderground_stations['Station ID'].index(
             stationid)
-        # require specific station type
-        if not 'vantage' in wunderground_stations['Station Type'][index_wunderground].lower():
-            #continue
-            pass
-        
-        #import pdb; pdb.set_trace()
+        # if stationtype argument is given, only stationids with the
+        # (lowercase converted) stationtype measurement devices are considered        
+        if opts.stationtype:
+            # require specific station type
+            if not opts.stationtype in wunderground_stations['Station Type'][index_wunderground].lower():
+                continue        
         # calculate distance of wunderground station to all KNMI reference stations
         distance = [utils.haversine(
             wunderground_stations['lon'][index_wunderground],
@@ -387,18 +390,28 @@ def main(opts):
             reference_stations['longitude'][idx],
             reference_stations['latitude'][idx]) for idx in range(
                 0,len(reference_stations['longitude']))]
-        
-        # inverse distance weighted interpolateion
-        # en.wikipedia.org/wiki/inverse_distance_weighting
-        weights = [1/(c**2) for c in distance]
-        # find index of closest reference station to wunderground station
-        min_index, min_value = min(enumerate(distance),
-                                   key=operator.itemgetter(1))
-        filtered_wund_data = calculate_load_wund_data(stationid)
-        #UHI = calculate_UHI(reference_data[min_index],
-        #              filtered_wund_data.filtered, stationid)
-        UHI = calculate_UHI(reference_data,
-                      filtered_wund_data.filtered, stationid, weights)
+        # calculate or load (if already calculated before) the filtered
+        # Wunderground data
+        filtered_wund_data = calculate_load_wund_data(stationid)            
+        if opts.interpolate:
+            # inverse distance weighted interpolateion
+            # en.wikipedia.org/wiki/inverse_distance_weighting
+            power = 2
+            weights = [1/(c**power) for c in distance]
+            UHI = calculate_UHI(reference_data,
+                        filtered_wund_data.filtered, stationid, opts.months,
+                        weights)
+        else:
+            # use value at closest reference station instead of interpolated
+            # find index of closest reference station to wunderground station
+            min_index, min_value = min(enumerate(distance),
+                                    key=operator.itemgetter(1))
+            UHI = calculate_UHI(reference_data[min_index],
+                                filtered_wund_data.filtered, stationid,
+                                opts.months)
+        # Require a correlation of at least 0.7 between reference temperature
+        # serie and station temperature serie. In addition, UHI.UHI95 should
+        # exist
         if UHI.corrcoef < 0.7 or not hasattr(UHI, 'UHI95'):
             continue  # someting must be wrong, skip the station
         UHI_station = [wunderground_stations['lat'][index_wunderground],
@@ -420,35 +433,43 @@ def main(opts):
             UHIzip = UHIzip_station
         i += 1
         print i
-        if i>80:
+        if i>300:
             break
-    # require at least 200 days of data
+    # require at least 360 days of data
     UHIdata = nparray([UHIzip[idx,:] for idx,c in
                        enumerate(UHIzip[:,4]) if c>360])
     stationlist = [stationlist[idx,:] for idx,c in
                        enumerate(UHIzip[:,4]) if c>360]
-    plot_scatter_spatial(UHIdata[:,1], UHIdata[:,0], UHIdata[:,2])
+    # create spatial scatter plot of UHI values
+    plot_scatter_spatial(UHIdata[:,1], UHIdata[:,0], UHIdata[:,2],
+                         'spatial.png')
     # fit statistical model
     # UHI = a*ufrac + b*inw + c*greenfrac + d
+    fit_statistical_model(UHIdata, 'reconst.png')
+
+def fit_statistical_model(UHIdata, filename):
+    '''
+    Fit a statistical model to the computed UHI values using the zipcode map.
+    Statistical model has the form
+        UHI = a*ufrac + b*inw + c*greenfrac + d
+    '''
     import scipy.optimize as optimize
+    from numpy import ones, hstack
     ydata = UHIdata[:,2]
     xdata = UHIdata[:,5:]
     # initial guess
     x0 = nparray([0.0, 0.0, 0.0, 0.0])
     # add constant
-    from numpy import ones, hstack
     xdata = hstack((xdata,ones((len(xdata[:,1]),1))))
     fit = optimize.leastsq(func, x0, args=(xdata, ydata))[0]
     recons = fit[0]*xdata[:,0] + fit[1]*xdata[:,1] + fit[2]*xdata[:,2] + fit[3]*xdata[:,3]
-    from pylab import *
     xlim(0,5)
     ylim(0,5)
     scatter(recons, UHIdata[:,2])
-    print npcor(recons, UHIdata[:,2])[0][1]
+    plt.title('Correlation: ' + npcor(recons, UHIdata[:,2])[0][1]) 
     plt.savefig('reconst.png', bbox_inches='tight')
-    show()
-    import pdb; pdb.set_trace()
-    
+    return fit
+
 def calculate_load_wund_data(stationid):
     '''
     Calculate or load Wunderground station data:
@@ -466,7 +487,7 @@ def calculate_load_wund_data(stationid):
         filename = 'pickled/' + stationid +'.pckl'
         f = open(filename, 'w')
         pickle.dump(filtered_wund_data, f, -1)
-        f.close()            
+        f.close()
     else:
         # load data from pickled object
         f = open('pickled/' + stationid + '.pckl')
@@ -506,14 +527,18 @@ def calculate_load_knmi_data(filenameKNMI, reference_station):
     return reference_data
     
 def merge_two_dicts(x, y):
-    '''Given two dicts, merge them into a new dict as a shallow copy.'''
+    '''
+    Given two dicts, merge them into a new dict as a shallow copy.
+    '''
     z = x.copy()
     z.update(y)
     return z
 
-def plot_scatter_spatial(lon, lat, var):
+def plot_scatter_spatial(lon, lat, var, filename):
     '''
-    description
+    Scatter plot of spatial point data using the colormap RdYlBu_r for the
+    domain of the Netherlands. The plot is saved to the filename that is given
+    as argument to the function.
     '''
     import matplotlib.pyplot as plt
     from mpl_toolkits.basemap import Basemap
@@ -531,8 +556,7 @@ def plot_scatter_spatial(lon, lat, var):
     m.drawcountries()
     sc = m.scatter(x, y, c=var, s=100, marker='o', cmap=cm)
     plt.colorbar(sc)
-    plt.savefig('test.png', bbox_inches='tight')
-    plt.show()
+    plt.savefig(filename, bbox_inches='tight')
 
 def func(params, xdata, ydata):
     '''
@@ -559,7 +583,19 @@ if __name__ == "__main__":
                         default='wunderground_stations.csv', required=False)
     parser.add_argument('-k', '--knmifile', help='KNMI csv file',
                         default='knmi_reference_data.csv', required=False)
+    parser.add_argument('-i', '--interpolate', help='Distance weighted ' +
+                        'interpolation of KNMI reference data instead of ' +
+                        'nearest reference station', required=False,
+                        action='store_true')
+    parser.add_argument('-s', '--stationtype', help='Require a certain ' +
+                        'instrument for the Wunderground station',
+                        required=False)
+    parser.add_argument('-m', '--months', required=True, type=int, nargs='+',
+                        help='month numbers (1-12) separated by space used to ' +
+                        'calculate UHI')
+
     # extract user entered arguments
     opts = parser.parse_args()
+    import pdb; pdb.set_trace()
     # main function
     main(opts)
