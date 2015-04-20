@@ -44,6 +44,15 @@ from time import time
 import glob
 import random
 from pylab import scatter, show, plot, savefig, clf, title, xlim,  ylim
+import matplotlib.pyplot as plt
+import matplotlib
+
+#font = {'family' : 'normal',
+#        'weight' : 'bold',
+#        'size'   : 22}
+
+#matplotlib.rc('font', **font)
+matplotlib.rcParams.update({'font.size': 22})
 
 class load_reference_data:
     def __init__(self, filename):
@@ -133,24 +142,27 @@ class calculate_UHI:
     '''
     calculate UHI and UHI 95th percentile for a Wunderground station
     '''
-    def __init__(self, reference_data, wund_data, stationid, months,
+    def __init__(self, reference_data, wund_data, stationid, opts,
                  weights=None):
         self.reference_data = reference_data
         self.wund_data = wund_data
         self.stationid = stationid
-        self.months = months
+        self.months = opts.months
+        self.starttime = opts.starttime
+        self.lengthwindow = opts.lengthwindow
         self.weights = weights
         self.remove_idx_nones()
         if not self.weights:
             self.results =[self.find_shared_datetime_temperature(
                 reference_data)]
+            tru = self.results[0]['tru']
         else:
             self.results = [self.find_shared_datetime_temperature(
                 reference_data[idx]) for idx in range(0,len(reference_data))]
-        tru = [(sum([(weights[idx]*self.results[idx]['tru'][
-            dtime]) for idx in range(0, len(
-                reference_data))])/sum(weights)) for dtime in range(
-                    0, len(self.results[0]['dtime']))]            
+            tru = [(sum([(weights[idx]*self.results[idx]['tru'][
+                dtime]) for idx in range(0, len(
+                    reference_data))])/sum(weights)) for dtime in range(
+                        0, len(self.results[0]['dtime']))]
         self.UHI = nparray(self.results[0]['turn']) - nparray(tru)
         self.calculate_daily_UHI()
         if hasattr(self, 'UHI_av'):
@@ -223,15 +235,15 @@ class calculate_UHI:
         # loop through all days in between
         for td in range(0, (enddate - startdate).days):
             # increase the date by 1 day for the next download
-            start_window = startdate + timedelta(days=td, hours=22)
+            start_window = startdate + timedelta(days=td, hours=self.starttime)
             if start_window.month in self.months:
-                end_window = start_window + timedelta(hours=7)
+                end_window = start_window + timedelta(hours=self.lengthwindow)
                 # average UHI over time interval
                 within = [idx for idx, date in enumerate(
                     self.results[0]['dtime']) if (start_window
                                                   <= date < end_window)]
-                # require at least 7 UHI times per time interval
-                if len(within) >= 7:
+                # require at least self.lengthwindow UHI times per time interval
+                if len(within) >= self.lengthwindow:
                     UHI_av = [nmean(self.UHI[within])]
                     if not isnan(UHI_av[0]):
                         try:
@@ -353,7 +365,8 @@ def create_list_of_stations():
     stationids = [os.path.splitext(os.path.basename(c))[0] for c in
                   stationfiles if os.path.splitext(os.path.basename(c))[0]
                   not in issuelist]
-    random.shuffle(stationids)  # randomize the order of the list
+    stationids = ['IZUIDHOL87', 'IZUIDHOL87']
+    #random.shuffle(stationids)  # randomize the order of the list
     return stationids
 
 def main(opts):
@@ -399,7 +412,7 @@ def main(opts):
             power = 2
             weights = [1/(c**power) for c in distance]
             UHI = calculate_UHI(reference_data,
-                        filtered_wund_data.filtered, stationid, opts.months,
+                        filtered_wund_data.filtered, stationid, opts,
                         weights)
         else:
             # use value at closest reference station instead of interpolated
@@ -408,11 +421,11 @@ def main(opts):
                                     key=operator.itemgetter(1))
             UHI = calculate_UHI(reference_data[min_index],
                                 filtered_wund_data.filtered, stationid,
-                                opts.months)
+                                opts)
         # Require a correlation of at least 0.7 between reference temperature
         # serie and station temperature serie. In addition, UHI.UHI95 should
         # exist
-        if UHI.corrcoef < 0.7 or not hasattr(UHI, 'UHI95'):
+        if UHI.corrcoef < 0.85 or not hasattr(UHI, 'UHI95'):
             continue  # someting must be wrong, skip the station
         UHI_station = [wunderground_stations['lat'][index_wunderground],
             wunderground_stations['lon'][index_wunderground],
@@ -445,7 +458,8 @@ def main(opts):
                          'spatial.png')
     # fit statistical model
     # UHI = a*ufrac + b*inw + c*greenfrac + d
-    fit_statistical_model(UHIdata, 'reconst.png')
+    fit = fit_statistical_model(UHIdata, 'reconst.png')
+
 
 def fit_statistical_model(UHIdata, filename):
     '''
@@ -463,10 +477,16 @@ def fit_statistical_model(UHIdata, filename):
     xdata = hstack((xdata,ones((len(xdata[:,1]),1))))
     fit = optimize.leastsq(func, x0, args=(xdata, ydata))[0]
     recons = fit[0]*xdata[:,0] + fit[1]*xdata[:,1] + fit[2]*xdata[:,2] + fit[3]*xdata[:,3]
-    xlim(0,5)
-    ylim(0,5)
-    scatter(recons, UHIdata[:,2])
-    plt.title('Correlation: ' + npcor(recons, UHIdata[:,2])[0][1]) 
+    plt.figure()
+    #xlim(0,5)
+    #ylim(0,5)
+    plt.scatter(recons, ydata)
+    plt.title('Correlation: ' + str(npcor(recons, UHIdata[:,2])[0][1]))
+    plt.xlabel('reconstructed')
+    plt.ylabel('observed')
+    ax = plt.gca()
+    ax.tick_params(axis='x', labelsize=16)
+    ax.tick_params(axis='y', labelsize=16)
     plt.savefig('reconst.png', bbox_inches='tight')
     return fit
 
@@ -532,7 +552,6 @@ def plot_scatter_spatial(lon, lat, var, filename):
     domain of the Netherlands. The plot is saved to the filename that is given
     as argument to the function.
     '''
-    import matplotlib.pyplot as plt
     from mpl_toolkits.basemap import Basemap
     cm = plt.cm.get_cmap('RdYlBu_r')
     plt.clf()  # close all open plots (if any)
@@ -571,9 +590,11 @@ if __name__ == "__main__":
     description = 'Time filter Wunderground netCDF data'
     parser = argparse.ArgumentParser(description=description)
     # fill argument groups
-    parser.add_argument('-w', '--wundfile', help='Wunderground csv file',
+    parser.add_argument('-w', '--wundfile', help='Wunderground csv file ' +
+                        '[default: wunderground_stations.csv]',
                         default='wunderground_stations.csv', required=False)
-    parser.add_argument('-k', '--knmifile', help='KNMI csv file',
+    parser.add_argument('-k', '--knmifile', help='KNMI csv file [default: ' +
+                        'knmi_reference_data.csv]',
                         default='knmi_reference_data.csv', required=False)
     parser.add_argument('-i', '--interpolate', help='Distance weighted ' +
                         'interpolation of KNMI reference data instead of ' +
@@ -585,9 +606,12 @@ if __name__ == "__main__":
     parser.add_argument('-m', '--months', required=True, type=int, nargs='+',
                         help='month numbers (1-12) separated by space used to ' +
                         'calculate UHI')
-
+    parser.add_argument('-b', '--starttime', required=False, type=int,
+                        default=22, help='start time (hour) [default = 22]')
+    parser.add_argument('-l', '--lengthwindow', required=False, type=int,
+                        default=7,
+                        help='Length of time window (hours) [default = 7]')
     # extract user entered arguments
     opts = parser.parse_args()
-    import pdb; pdb.set_trace()
     # main function
     main(opts)

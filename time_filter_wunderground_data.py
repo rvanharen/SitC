@@ -27,6 +27,9 @@ class time_filter_ncfile:
         self.timewindow = timewindow
         self.season = season
         self.timeofday = timeofday
+        # TODO: don't hardcode self.months and self.hours
+        self.months = [6, 7, 8]
+        self.hours = [22, 23, 0, 1, 2, 3, 4, 5]
         self.var = ['TemperatureC', 'DewpointC', 'PressurehPa', 'Humidity',
                     'WindSpeedKMH', 'dailyrainMM']
         self.check_file()  # check if file exists and has nc extension
@@ -61,10 +64,8 @@ class time_filter_ncfile:
                                             units=time_axis.units,
                                             calendar=time_axis.calendar)
         # extract season and time of day
-        # TODO: don't hardcode this
         idx_extract = ([y for y,c in enumerate(self.time_cal) if
-                          (c.month>=6 and c.month<=8 and (
-                              c.hour<=5 or c.hour>=22))])
+                          (c.month in self.months and c.hour in self.hours)])
         self.time_cal = self.time_cal[idx_extract]
         
         self.variables = {} # create empty dictionary
