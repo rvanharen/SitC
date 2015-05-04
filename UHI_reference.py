@@ -16,6 +16,7 @@ from combine_wunderground_data import fitem
 from numpy import vstack
 from numpy import zeros
 from numpy import mean as nmean
+from numpy import nanmax as nmax
 from numpy import unique
 from numpy import delete as npdelete
 from numpy import array as nparray
@@ -46,6 +47,7 @@ import random
 from pylab import scatter, show, plot, savefig, clf, title, xlim,  ylim
 import matplotlib.pyplot as plt
 import matplotlib
+from numpy import *
 
 #font = {'family' : 'normal',
 #        'weight' : 'bold',
@@ -113,7 +115,11 @@ class load_reference_data:
                    range(0,len(self.csvdata['YYYYMMDD']))]
         # create datetime object
         self.csvdata['datetime'] = [datetime.strptime(
-            str(item), ('%Y%m%d%H')) for item in dstring]        
+            str(item), ('%Y%m%d%H')) for item in dstring]
+        # Correct conversion of the datestring
+        # the date of the night -> HH=24 is HH=0 on the next day!
+        self.csvdata['datetime'] = [c+ timedelta(days=1) if c.hour==0 else
+                                    c for c in self.csvdata['datetime']]
         # rain is (-1 for <0.05 mm), set to 0
         self.csvdata['RH'] = [0 if item == -1 else
                                   item for item in self.csvdata['RH']]
@@ -138,6 +144,7 @@ class load_reference_data:
             self.csvdata['api'][index] = c * item + self.csvdata['api'][
                 index-1]
 
+
 class calculate_UHI:
     '''
     calculate UHI and UHI 95th percentile for a Wunderground station
@@ -149,7 +156,9 @@ class calculate_UHI:
         self.stationid = stationid
         self.months = opts.months
         self.starttime = opts.starttime
+        self.timemax = opts.timemax
         self.lengthwindow = opts.lengthwindow
+        self.drydays = opts.drydays
         self.weights = weights
         self.remove_idx_nones()
         if not self.weights:
@@ -163,16 +172,17 @@ class calculate_UHI:
                 dtime]) for idx in range(0, len(
                     reference_data))])/sum(weights)) for dtime in range(
                         0, len(self.results[0]['dtime']))]
+        if len(self.results[0]['turn'])==0:
+            # no times shared or no dry days (or rain data=-999)
+            self.corrcoef = 0
+            return
         self.UHI = nparray(self.results[0]['turn']) - nparray(tru)
         self.calculate_daily_UHI()
         if hasattr(self, 'UHI_av'):
-            self.UHI95 = nppercentile(self.UHI_av,95)
+            self.UHI95 = nppercentile(self.UHI_av, 95)
+            self.UHI50 = nppercentile(self.UHI_av, 50)
         self.corrcoef = npcor(self.results[0]['turn'], tru)[0][1]
         print "correlation coefficient: " + str(self.corrcoef)
-        # calculate wind components reference data
-        #U, V = utils.wind_components(reference_data['FF'],
-        #                             reference_data['DD'])
-
         # calculate UHI by subtracting reference temperature from station
         # measurement for each timestep
         if not os.path.isfile('figs/' + stationid + '.png'):
@@ -188,7 +198,7 @@ class calculate_UHI:
         find all Nones in self.wund_data['TemperatureC'] list
         '''
         idx_nones = [i for i,j in enumerate(self.wund_data['TemperatureC']) if
-                     j is None or j<0 or j>35]
+                     j is None or j<0 or j>45]
         # remove idx_nones for all keys in dictionary
         for key in self.wund_data.keys():
             self.wund_data[key] = npdelete(nparray(self.wund_data[key]),
@@ -200,29 +210,59 @@ class calculate_UHI:
         '''
         # load datetime objects for reference data and Wunderground data
         ref_datetime = ref_data['datetime']
+        # TODO: move this to creation of pckl file
+        ref_datetime = [c + timedelta(days=1) if c.hour==0 else c for c in ref_datetime]
         wund_datetime = self.wund_data['datetime']
         # find shared datetimes between two reference/Wunderground data
-        shared_datetime_1 = utils.ismember(ref_datetime, wund_datetime)
-        shared_datetime_2 = utils.ismember(wund_datetime, ref_datetime)
+        shared_datetime_1 = utils.ismember2(ref_datetime, wund_datetime)
+        shared_datetime_2 = utils.ismember2(wund_datetime, ref_datetime)
         # extract temperature in both sets for shared datetimes
         tru = [ref_data['T'][i] for i in shared_datetime_2
                if i is not None]
+        # datetime object of shared datetimes
+        dtime = [ref_datetime[i] for i in shared_datetime_2] # if i is not None]
         turn = [self.wund_data['TemperatureC'][i] for i in shared_datetime_1
                 if i is not None]
-        # datetime object of shared datetimes
-        dtime = [ref_datetime[i] for i in shared_datetime_2 if i is not None]
         # remove measurements for datetimes where temperature is not defined
         # in Wunderground data
         valid = [idx for idx,c in enumerate(turn) if not isnan(c)]
         turn, tru = nparray(turn)[valid], nparray(tru)[valid]
         dtime = nparray(dtime)[valid]
+        #         
+        turn = [turn[j] for j,c in enumerate(dtime) if (c.month in self.months and c.year>=2007)]
+        tru = [tru[j] for j,c in enumerate(dtime) if (c.month in self.months and c.year>=2007)]
+        dtime = [c for c in dtime if (c.month in self.months and c.year>=2007)]
+        # use dry days only
+        if self.drydays:
+            # Extract hourly rain at each extracted time
+            shared_datetime1 = utils.ismember2(dtime, ref_datetime)
+            refrain = [ref_data['RH'][i] for i in shared_datetime1 if i is
+                       not None]
+            shared_datetime2 = utils.ismember2(dtime, wund_datetime)
+            #ccc = [ref_datetime[i] for i in shared_datetime1]
+            #ddd = [wund_datetime[i] for i in shared_datetime2]
+    
+            wundrain = [self.wund_data['HourlyPrecipMM'][i] for i in
+                        shared_datetime2 if i is not None]
+            # require no rain both at reference station (refrain) and 
+            # weather underground station (wundrain)
+            refrain = [int(round(i*10)) if not isnan(i) else NaN for i in refrain]
+            wundrain = [int(round(i*10)) if not isnan(i) else NaN for i in wundrain]
+            idx_dry = [c for c,j in enumerate
+                       ([all(c) for c in
+                         zip([True if i==0 else False for i in refrain],
+                             [True if i==0 else False for i in wundrain])])
+                         if j==True]
+            turn = nparray(turn)[idx_dry]
+            tru = nparray(tru)[idx_dry]
+            dtime = nparray(dtime)[idx_dry]
         # create a dictionary containing the results and return the results
         results = dict(zip(['turn', 'tru', 'dtime'], [turn, tru, dtime]))
         return results
 
     def calculate_daily_UHI(self):
         '''
-        calculate daily average UHI for hourly timesteps defined in TODO
+        calculate daily UHI
         '''
         # set startdate as the first available date
         startdate = datetime(self.results[0]['dtime'][0].year,
@@ -231,7 +271,7 @@ class calculate_UHI:
         # set enddate as the last available date
         enddate = datetime(self.results[0]['dtime'][-1].year,
                            self.results[0]['dtime'][-1].month,
-                           self.results[0]['dtime'][-1].day, 0, 0)        
+                           self.results[0]['dtime'][-1].day, 0, 0)
         # loop through all days in between
         for td in range(0, (enddate - startdate).days):
             # increase the date by 1 day for the next download
@@ -241,10 +281,14 @@ class calculate_UHI:
                 # average UHI over time interval
                 within = [idx for idx, date in enumerate(
                     self.results[0]['dtime']) if (start_window
-                                                  <= date < end_window)]
+                                                  <= date <= end_window)]
                 # require at least self.lengthwindow UHI times per time interval
-                if len(within) >= self.lengthwindow:
-                    UHI_av = [nmean(self.UHI[within])]
+                if (len(within) >= self.lengthwindow) or (self.drydays and
+                                                          len(within)>=1):
+                    if self.timemax:
+                        UHI_av = [nmax(self.UHI[within])]
+                    else:
+                        UHI_av = [nmean(self.UHI[within])]
                     if not isnan(UHI_av[0]):
                         try:
                             self.UHI_av = concatenate((self.UHI_av, UHI_av))
@@ -294,7 +338,7 @@ def find_zipcode_map(lon_in, lat_in):
     lon_in_t, lat_in_t = utils.ReprojectCoords(
         [lon_in, lat_in], src_srs, tgt_srs)
     # open geotif
-    dataset = gdal.Open("zipcode/buurt_inw.tif", gdal.GA_ReadOnly)
+    dataset = gdal.Open("zipcode/buurt_bev_dichth.tif", gdal.GA_ReadOnly)
     # create lon/lat arrays of geotif
     gt = dataset.GetGeoTransform()
     cols = dataset.RasterXSize
@@ -326,10 +370,11 @@ def find_zipcode_map(lon_in, lat_in):
     greenfrac = dataset.GetRasterBand(1).ReadAsArray()[lat_idx,lon_idx]
     dataset = None  # close geotiff
     # urban fraction
-    dataset = gdal.Open("zipcode/conv_ufrac.tif", gdal.GA_ReadOnly)
+    dataset = gdal.Open("zipcode/conv_water.tif", gdal.GA_ReadOnly)
     ufrac = dataset.GetRasterBand(1).ReadAsArray()[lat_idx,lon_idx]
     dataset = None  # close geotiff
     # return 
+    #import pdb; pdb.set_trace()
     return [ufrac, greenfrac, inwfrac]
 
 def create_list_of_stations():
@@ -358,15 +403,15 @@ def create_list_of_stations():
                           'INOORDHO070', 'INORTHH08', 'IOVERIJS50',
                           'IUTRECHT56', 'IUTRECHT63', 'IZEELAND36',
                           'IZHLEIDE2', 'IZHVLAAR1', 'IZUIDHOL104',
-                          'IZUIDHOL78']
+                          'IZUIDHOL78',
+                          'IFLEVOLA16', 'INBROOSE2', 'INORTHHO3', 'ILIMBURG40']
     # combine issue lists
     issuelist = hstack((issuelist, issue_measurements))
     # create stationids from stationfiles for stationids not in issuelist
     stationids = [os.path.splitext(os.path.basename(c))[0] for c in
                   stationfiles if os.path.splitext(os.path.basename(c))[0]
                   not in issuelist]
-    stationids = ['IZUIDHOL87', 'IZUIDHOL87']
-    #random.shuffle(stationids)  # randomize the order of the list
+    random.shuffle(stationids)  # randomize the order of the list
     return stationids
 
 def main(opts):
@@ -388,14 +433,22 @@ def main(opts):
     i=0       
     for stationid in stationids:
         # find index of wunderground station
-        index_wunderground = wunderground_stations['Station ID'].index(
-            stationid)
+        try:
+            index_wunderground = wunderground_stations['Station ID'].index(
+                stationid)
+        except ValueError:
+            continue
         # if stationtype argument is given, only stationids with the
-        # (lowercase converted) stationtype measurement devices are considered        
-        if opts.stationtype:
-            # require specific station type
-            if not opts.stationtype in wunderground_stations['Station Type'][index_wunderground].lower():
-                continue        
+        # (lowercase converted) stationtype measurement devices are considered
+        try:
+            if opts.stationtype:
+                # require specific station type
+                if not True in [c in  wunderground_stations
+                                ['Station Type'][index_wunderground].lower()
+                                for c in opts.stationtype]:
+                    raise Exception
+        except Exception:
+            continue
         # calculate distance of wunderground station to all KNMI reference stations
         distance = [utils.haversine(
             wunderground_stations['lon'][index_wunderground],
@@ -429,7 +482,7 @@ def main(opts):
             continue  # someting must be wrong, skip the station
         UHI_station = [wunderground_stations['lat'][index_wunderground],
             wunderground_stations['lon'][index_wunderground],
-            UHI.UHI95, nmean(UHI.UHI_av), len(UHI.UHI_av)]
+            UHI.UHI95, UHI.UHI50, len(UHI.UHI_av)]
         # create a list of station names
         try:
             stationlist = vstack((stationlist, stationid))
@@ -449,17 +502,19 @@ def main(opts):
         if i>300:
             break
     # require at least 360 days of data
+    import pdb; pdb.set_trace()
     UHIdata = nparray([UHIzip[idx,:] for idx,c in
-                       enumerate(UHIzip[:,4]) if c>360])
+                       enumerate(UHIzip[:,4]) if c>len(opts.months)*30*4])
     stationlist = [stationlist[idx,:] for idx,c in
-                       enumerate(UHIzip[:,4]) if c>360]
+                       enumerate(UHIzip[:,4]) if c>len(opts.months)*30*4]
     # create spatial scatter plot of UHI values
     plot_scatter_spatial(UHIdata[:,1], UHIdata[:,0], UHIdata[:,2],
                          'spatial.png')
     # fit statistical model
-    # UHI = a*ufrac + b*inw + c*greenfrac + d
-    fit = fit_statistical_model(UHIdata, 'reconst.png')
-
+    fit, recons = fit_statistical_model(UHIdata, 'reconst.png')
+    import pdb; pdb.set_trace()
+    plot_scatter_spatial(UHIdata[:,1], UHIdata[:,0], recons,
+                         'spatial_recons.png')
 
 def fit_statistical_model(UHIdata, filename):
     '''
@@ -469,26 +524,73 @@ def fit_statistical_model(UHIdata, filename):
     '''
     import scipy.optimize as optimize
     from numpy import ones, hstack
+    # data to fit the statistical model
     ydata = UHIdata[:,2]
-    xdata = UHIdata[:,5:]
-    # initial guess
-    x0 = nparray([0.0, 0.0, 0.0, 0.0])
-    # add constant
+    xdata = UHIdata[:,6:]
+    # bevd should at least be >0
+    ydata = ydata[xdata[:,1]>0]
+    xdata = xdata[xdata[:,1]>0]
+    # scale variables to correct units
+    xdata[:,0] = xdata[:,0] / 100
+    
+    #xdata[:,1] = xdata[:,1] / 10
+    xxdata = range(1,10000)
+    yydata = ydata - -0.04225098 * xdata[:,1]
+    aaa = [1.965*c**0.138 for c in xxdata]
+    bbb = [6.16036848*c**(-0.01301373) for c in xxdata]
+    plt.figure()
+    plot(xxdata, aaa, 'r')
+    scatter(xdata[:,1], yydata)
+    plot(xxdata, bbb, 'b')
+    
+    # add an array of ones to optionally fit a constant
     xdata = hstack((xdata,ones((len(xdata[:,1]),1))))
+    # initial guess of fit
+    x0 = nparray([0.0, 0.0, 0.0])
+    # fit model 1
     fit = optimize.leastsq(func, x0, args=(xdata, ydata))[0]
-    recons = fit[0]*xdata[:,0] + fit[1]*xdata[:,1] + fit[2]*xdata[:,2] + fit[3]*xdata[:,3]
+    # create reconstruction from model 1
+    recons = fit[0] * xdata[:,0] + fit[1] * xdata[:,1] + fit[2] * xdata[:,2]
+    print fit
+    # fit model 2
+    x0 = nparray([0.0, 0.0, 0.0])
+    fit = optimize.leastsq(func2, x0, args=(xdata, ydata))[0]
+    #from leastsq_bounds import leastsq_bounds
+    #fit2 =leastsq_bounds(func2, x0, bounds=[[-inf,inf],[-inf,inf],[0,1]],boundsweight=100,args=(xdata, ydata))[0]
+
+    # create reconstruction from model 2
+    recons2 = fit[0]*xdata[:,0] + fit[1]*(xdata[:,1]**fit[2])
+    print fit
+    #from leastsq_bounds import leastsq_bounds
+    #fit2 =leastsq_bounds(func2, x0, bounds=[[-inf,inf],[-inf,inf],[0,1]],boundsweight=100,args=(xdata, ydata))[0]
+
+    # create reconstruction from model 2
+    plt.figure()
+    plt.plot(xdata[:,0], ydata, 'o')
+    # calc the trendline
+    z = polyfit(xdata[:,0], ydata, 1)
+    p = poly1d(z)
+    # the line equation:
+    trendline = str('y=%.6fx+(%.6f)'%(z[0],z[1]))
+    plt.plot(xdata[:,0], p(xdata[:,0]),'r--', label=trendline)
+    plt.legend()
+    plt.xlabel('green fraction [%]')
+    plt.ylabel('UHI')
+    plt.savefig('trend.png', bbox_inches='tight')
     plt.figure()
     #xlim(0,5)
     #ylim(0,5)
     plt.scatter(recons, ydata)
+    plt.scatter(recons2, ydata, color='r')
     plt.title('Correlation: ' + str(npcor(recons, UHIdata[:,2])[0][1]))
+    print npcor(recons, UHIdata[:,2])[0][1], npcor(recons2, UHIdata[:,2])[0][1]
     plt.xlabel('reconstructed')
     plt.ylabel('observed')
     ax = plt.gca()
     ax.tick_params(axis='x', labelsize=16)
     ax.tick_params(axis='y', labelsize=16)
     plt.savefig('reconst.png', bbox_inches='tight')
-    return fit
+    return fit, recons
 
 def calculate_load_wund_data(stationid):
     '''
@@ -498,8 +600,8 @@ def calculate_load_wund_data(stationid):
     '''
     if not os.path.isfile('pickled/' + stationid + '.pckl'):
         filtered_wund_data = time_filter_ncfile('ncfiles/' + stationid + '.nc',
-                                                60, 10, 'average', 'JJA',
-                                                'night')
+                                                60, 10, 'average', range(1,13),
+                                                range(0,24))
         if not os.path.isdir('pickled'):
             # create pickled dir if it does not exist yet
             os.mkdir('pickled')
@@ -565,7 +667,7 @@ def plot_scatter_spatial(lon, lat, var, filename):
     x, y = m(lon,lat)
     m.drawcoastlines()
     m.drawcountries()
-    sc = m.scatter(x, y, c=var, s=100, marker='o', cmap=cm)
+    sc = m.scatter(x, y, c=var, s=200, marker='o', cmap=cm) #, vmin=0.5, vmax=6.5)
     plt.colorbar(sc)
     plt.savefig(filename, bbox_inches='tight')
 
@@ -580,6 +682,11 @@ def func(params, xdata, ydata):
     from numpy import dot as npdot
     return (ydata - npdot(xdata, params))
 
+def func2(params, xdata, ydata):
+    return ydata - ((params[0]*xdata[:,0]) + (params[1]*(xdata[:,1]**params[2]))) #+ params[3])
+
+def func3(params, xdata, ydata):
+    return ydata - ((params[0]*(xdata[:,1]**params[1]))) #+ params[3])
 
 if __name__ == "__main__":
     # define logger
@@ -600,9 +707,12 @@ if __name__ == "__main__":
                         'interpolation of KNMI reference data instead of ' +
                         'nearest reference station', required=False,
                         action='store_true')
+    parser.add_argument('-t', '--timemax', help='Use maximum of time window ' +
+                        'instead of average', required=False,
+                        action='store_true')                        
     parser.add_argument('-s', '--stationtype', help='Require a certain ' +
                         'instrument for the Wunderground station',
-                        required=False)
+                        required=False, type=str, nargs='+')
     parser.add_argument('-m', '--months', required=True, type=int, nargs='+',
                         help='month numbers (1-12) separated by space used to ' +
                         'calculate UHI')
@@ -611,6 +721,8 @@ if __name__ == "__main__":
     parser.add_argument('-l', '--lengthwindow', required=False, type=int,
                         default=7,
                         help='Length of time window (hours) [default = 7]')
+    parser.add_argument('-d', '--drydays', required=False, action='store_true',
+                        help='Use only dry time intervals')    
     # extract user entered arguments
     opts = parser.parse_args()
     # main function

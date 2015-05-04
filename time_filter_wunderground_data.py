@@ -18,20 +18,27 @@ from numpy import concatenate as npconcatenate
 from scipy.stats import nanmean
 import argparse
 import os
+import cPickle as pickle
 
 
 class time_filter_ncfile:
-    def __init__(self, filename, timedelta, timewindow, method, season, timeofday):
+    def __init__(self, filename, timedelta, timewindow, method, months, hours):
         self.filename = filename
         self.timedelta = timedelta
         self.timewindow = timewindow
-        self.season = season
-        self.timeofday = timeofday
+        #self.season = season
+        #self.timeofday = timeofday
         # TODO: don't hardcode self.months and self.hours
-        self.months = [6, 7, 8]
-        self.hours = [22, 23, 0, 1, 2, 3, 4, 5]
+        # self.months = [6, 7, 8]
+        # self.hours = [22, 23, 0, 1, 2, 3, 4, 5]
+        #self.months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        self.months = months
+        self.hours = hours
+        #self.months = range(1,13)
+        #self.hours = range(0,24)
+        #self.hours = [22, 23, 0, 1, 2, 3, 4, 5]
         self.var = ['TemperatureC', 'DewpointC', 'PressurehPa', 'Humidity',
-                    'WindSpeedKMH', 'dailyrainMM']
+                    'WindSpeedKMH', 'dailyrainMM', 'HourlyPrecipMM']
         self.check_file()  # check if file exists and has nc extension
         self.read_ncfile()  # open netCDF file and read variables
         if method == 'interpolate':
@@ -273,9 +280,12 @@ if __name__ == "__main__":
     # extract user entered arguments
     opts = parser.parse_args()
 
+    opts.months = range(1,13)
+    opts.hours = range(0,24)
     # time filter data
     filtered = time_filter_ncfile(opts.inputfile, opts.timedelta,
-                                  opts.timewindow, opts.method)
+                                  opts.timewindow, opts.method, opts.months,
+                                  opts.hours)
     
     # save filtered as a pickled object
     if not os.path.isdir('pickled'):
