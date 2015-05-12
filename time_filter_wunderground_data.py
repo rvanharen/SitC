@@ -80,7 +80,9 @@ class time_filter_ncfile:
             # fill dictionary
             self.variables[variable] = self.ncfile.variables[
                 variable][idx_extract]
-
+        if not len(self.ncfile.variables['TemperatureC'][idx_extract]):
+            self.variables['TemperatureC'] = self.ncfile.variables[
+                'TemperatureF'][idx_extract] - 273.15
 
     def time_filter_ncfile(self):
         '''
