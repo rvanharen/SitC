@@ -78,12 +78,31 @@ class time_filter_ncfile:
         self.variables = {} # create empty dictionary
         for variable in self.var:
             # fill dictionary
-            self.variables[variable] = self.ncfile.variables[
-                variable][idx_extract]
-        if not len(self.ncfile.variables['TemperatureC'][idx_extract]):
-            self.variables['TemperatureC'] = self.ncfile.variables[
-                'TemperatureF'][idx_extract] - 273.15
-
+            try:
+                self.variables[variable] = self.ncfile.variables[
+                    variable][idx_extract]
+            except KeyError:
+                if variable == 'TemperatureC':
+                    self.variables['TemperatureC'] = (self.ncfile.variables[
+                        'TemperatureF'][idx_extract] - 32)/1.8
+                elif variable == 'DewpointC':
+                    self.variables['DewpointC'] = (self.ncfile.variables[
+                        'DewpointF'][idx_extract] - 32)/1.8
+                elif variable == 'PressurehPa':
+                    self.variables['PressurehPa'] = 33.8639 * self.ncfile.variables[
+                        'PressureIn'][idx_extract]
+                elif variable == 'dailyrainMM':
+                    self.variables['dailyrainMM'] = (1./0.039370) * self.ncfile.variables[
+                        'dailyrainin'][idx_extract]
+                elif variable == 'HourlyPrecipMM':
+                    self.variables['HourlyPrecipMM'] = (1./0.039370) * self.ncfile.variables[
+                        'HourlyPrecipIn'][idx_extract]                    
+                elif variable == 'WindSpeedKMH':
+                    self.variables['WindSpeedKMH'] = 1.609344 * self.ncfile.variables[
+                        'WindSpeedMPH'][idx_extract]                    
+                else:
+                    raise KeyError
+                
     def time_filter_ncfile(self):
         '''
         Function to time filter the measurements
